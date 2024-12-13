@@ -7,4 +7,3 @@ ComfyUI TRELLIS is a large 3D asset generation in various formats, such as Radia
 - [ ] Fix BUGS
 - [ ] Installation
 
-
