@@ -1,0 +1,16 @@
+pillow==10.4.0
+imageio==2.36.1
+imageio-ffmpeg==0.5.1
+tqdm==4.67.1
+easydict==1.13
+opencv-python-headless==4.10.0.84
+scipy
+rembg
+onnxruntime
+trimesh
+xatlas
+pyvista
+pymeshfix
+igraph
+kaolin
+spconv-cu124
