@@ -1,6 +1,9 @@
+
 # ComfyUI-IF_Trellis
+
 ComfyUI TRELLIS is a large 3D asset generation in various formats, such as Radiance Fields, 3D Gaussians, and meshes. The cornerstone of TRELLIS is a unified Structured LATent (SLAT) representation that allows decoding to different output formats and Rectified Flow Transformers tailored for SLAT as the powerful backbones. 
 
+![teaser (1)](https://github.com/user-attachments/assets/6eee56bd-0936-44a5-b843-be4e87be649f)
 
 # Installation 
 ONLY tested on windows but it should work easier in Linux without any issues or needing such specific stuffs.
