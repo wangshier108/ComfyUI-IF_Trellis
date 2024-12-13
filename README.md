@@ -75,6 +75,8 @@ pip install C:\tmp\extensions\nvdiffrast
     git clone --recurse-submodules https://github.com/sdbds/TRELLIS-for-windows.git
     ```
 ## MUST HAVE `--recurse-submodules`
+![blender_Ny9GX9TsN1](https://github.com/user-attachments/assets/ac0d8c65-a9f4-4277-8453-ee62a9f7aef9)
+![thorium_lou9h3r4uF](https://github.com/user-attachments/assets/3e81cc5e-898b-48ff-8ab2-d6394cd1ff8f)
 
 
 ## 🌟 Features
