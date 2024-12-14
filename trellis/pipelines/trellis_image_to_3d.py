@@ -8,6 +8,7 @@ from easydict import EasyDict as edict
 from torchvision import transforms
 from PIL import Image
 import rembg
+import gc
 from .base import Pipeline
 from . import samplers
 from ..modules import sparse as sp
@@ -36,6 +37,8 @@ class TrellisImageTo3DPipeline(Pipeline):
         if models is None:
             return
         super().__init__(models)
+        self._device = next(self.models['image_cond_model'].parameters()).device
+        self._models_cpu = {}
         self.sparse_structure_sampler = sparse_structure_sampler
         self.slat_sampler = slat_sampler
         self.sparse_structure_sampler_params = {}
@@ -56,6 +59,8 @@ class TrellisImageTo3DPipeline(Pipeline):
         new_pipeline = TrellisImageTo3DPipeline()
         new_pipeline.__dict__ = pipeline.__dict__
         args = pipeline._pretrained_args
+
+        new_pipeline._models_cpu = {}
 
         new_pipeline.sparse_structure_sampler = getattr(samplers, args['sparse_structure_sampler']['name'])(**args['sparse_structure_sampler']['args'])
         new_pipeline.sparse_structure_sampler_params = args['sparse_structure_sampler']['params']
@@ -161,6 +166,62 @@ class TrellisImageTo3DPipeline(Pipeline):
             'neg_cond': neg_cond,
         }
 
+    @property
+    def device(self) -> torch.device:
+        """Override device property to ensure it persists"""
+        if not hasattr(self, '_device'):
+            self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        return self._device
+
+    def cleanup(self):
+        """Explicit cleanup method that preserves essential properties"""
+        # Store current device before cleanup
+        current_device = self.device
+        
+        # Clear rembg session
+        if hasattr(self, 'rembg_session') and self.rembg_session is not None:
+            del self.rembg_session
+            self.rembg_session = None
+        
+        # Clear CPU models
+        if hasattr(self, '_models_cpu'):
+            for key in list(self._models_cpu.keys()):
+                del self._models_cpu[key]
+            self._models_cpu.clear()
+        
+        # Clear GPU models while preserving the models dict
+        if hasattr(self, 'models'):
+            for key in list(self.models.keys()):
+                del self.models[key]
+        
+        # Force memory cleanup
+        torch.cuda.empty_cache()
+        gc.collect()
+        
+        # Restore essential properties
+        self._device = current_device
+        if not hasattr(self, 'models'):
+            self.models = {}
+        if not hasattr(self, '_models_cpu'):
+            self._models_cpu = {}
+
+    def unload_models(self, model_keys: List[str]):
+        """Unload specific models from GPU memory"""
+        for key in model_keys:
+            if key in self.models:
+                self._models_cpu[key] = self.models[key].cpu()
+                del self.models[key]
+        torch.cuda.empty_cache()
+        gc.collect()
+
+    def load_models(self, model_keys: List[str]):
+        """Load specific models back to GPU"""
+        for key in model_keys:
+            if key in self._models_cpu:
+                self.models[key] = self._models_cpu[key].to(self.device)
+                del self._models_cpu[key]
+
+    @torch.no_grad()
     def sample_sparse_structure(
         self,
         cond: dict,
@@ -175,6 +236,9 @@ class TrellisImageTo3DPipeline(Pipeline):
             num_samples (int): The number of samples to generate.
             sampler_params (dict): Additional parameters for the sampler.
         """
+        # Load required models
+        self.load_models(['sparse_structure_flow_model', 'sparse_structure_decoder'])
+
         # Sample occupancy latent
         flow_model = self.models['sparse_structure_flow_model']
         reso = flow_model.resolution
@@ -210,12 +274,27 @@ class TrellisImageTo3DPipeline(Pipeline):
             dict: The decoded structured latent.
         """
         ret = {}
-        if 'mesh' in formats:
-            ret['mesh'] = self.models['slat_decoder_mesh'](slat)
-        if 'gaussian' in formats:
-            ret['gaussian'] = self.models['slat_decoder_gs'](slat)
-        if 'radiance_field' in formats:
-            ret['radiance_field'] = self.models['slat_decoder_rf'](slat)
+        for format_type in formats:
+            # Load and process one format at a time
+            if format_type == 'mesh':
+                self.load_models(['slat_decoder_mesh'])
+                ret['mesh'] = self.models['slat_decoder_mesh'](slat)
+                self.unload_models(['slat_decoder_mesh'])
+                
+            elif format_type == 'gaussian':
+                self.load_models(['slat_decoder_gs'])
+                ret['gaussian'] = self.models['slat_decoder_gs'](slat)
+                self.unload_models(['slat_decoder_gs'])
+                
+            elif format_type == 'radiance_field':
+                self.load_models(['slat_decoder_rf'])
+                ret['radiance_field'] = self.models['slat_decoder_rf'](slat)
+                self.unload_models(['slat_decoder_rf'])
+            
+            # Force garbage collection after each format
+            torch.cuda.empty_cache()
+            gc.collect()
+            
         return ret
     
     def sample_slat(
@@ -232,6 +311,9 @@ class TrellisImageTo3DPipeline(Pipeline):
             coords (torch.Tensor): The coordinates of the sparse structure.
             sampler_params (dict): Additional parameters for the sampler.
         """
+        # Load required models
+        self.load_models(['slat_flow_model'])
+        
         # Sample structured latent
         flow_model = self.models['slat_flow_model']
         noise = sp.SparseTensor(
@@ -276,8 +358,30 @@ class TrellisImageTo3DPipeline(Pipeline):
         """
         if preprocess_image:
             image = self.preprocess_image(image)
+            
+        # Load and process image conditioning
+        self.load_models(['image_cond_model'])
         cond = self.get_cond([image])
+        self.unload_models(['image_cond_model'])
+        
         torch.manual_seed(seed)
+        
+        # Generate sparse structure
         coords = self.sample_sparse_structure(cond, num_samples, sparse_structure_sampler_params)
+        torch.cuda.empty_cache()
+        gc.collect()
+        
+        # Generate SLAT
         slat = self.sample_slat(cond, coords, slat_sampler_params)
-        return self.decode_slat(slat, formats)
+        torch.cuda.empty_cache()
+        gc.collect()
+
+        # Unload all models but don't do full cleanup
+        self.unload_models(list(self.models.keys()))
+        
+        # Process formats one at a time
+        results = self.decode_slat(slat, formats)
+        torch.cuda.empty_cache()
+        gc.collect()
+        
+        return results
