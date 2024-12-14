@@ -35,7 +35,9 @@ class IF_TrellisImageTo3D:
                 "mesh_simplify": ("FLOAT", {"default": 0.95, "min": 0.9, "max": 0.98, "step": 0.01}),
                 "texture_size": ("INT", {"default": 1024, "min": 512, "max": 2048, "step": 512}),
                 "fps": ("INT", {"default": 15, "min": 1, "max": 60}),
-                "save_glb": ("BOOLEAN", {"default": True}),  
+                "save_glb": ("BOOLEAN", {"default": True}),
+                "save_video": ("BOOLEAN", {"default": True}),
+                "texture_mode": (["none", "fast"],),
                 "project_name": ("STRING", {"default": "trellis_output"})
             }
         }
@@ -171,7 +173,8 @@ class IF_TrellisImageTo3D:
                     ss_guidance_strength=7.5, ss_sampling_steps=12, 
                     slat_guidance_strength=3.0, slat_sampling_steps=12,
                     mesh_simplify=0.95, texture_size=1024, fps=15,
-                    save_glb=True, project_name="trellis_output"):
+                    save_glb=True, save_video=True, texture_mode="fast", 
+                    project_name="trellis_output"):
         """Convert image to 3D representation"""
         
         try:
@@ -182,6 +185,10 @@ class IF_TrellisImageTo3D:
             pil_image = self.preprocess_comfy_image(image)
 
             # Run pipeline with modified parameters
+            formats = ['mesh']  # Always need mesh for GLB
+            if save_video:
+                formats.append('gaussian')  # Only add gaussian if video needed
+            
             outputs = model.run(
                 pil_image,
                 seed=seed,
@@ -193,6 +200,7 @@ class IF_TrellisImageTo3D:
                     "steps": slat_sampling_steps,
                     "cfg_strength": slat_guidance_strength,
                 },
+                formats=formats,  # Pass formats list
                 preprocess_image=False  # Skip Trellis preprocessing since we did it already
             )
 
@@ -200,19 +208,21 @@ class IF_TrellisImageTo3D:
             glb_path = ""
             video_path = ""
 
-            # Generate and save video preview
-            video_frames = render_utils.render_video(outputs['gaussian'][0])['color']
-            video_path = os.path.join(out_dir, f"{project_name}_preview.mp4")
-            imageio.mimsave(video_path, video_frames, fps=fps)
+            # Generate and save video preview if requested
+            if save_video and 'gaussian' in outputs:
+                video_frames = render_utils.render_video(outputs['gaussian'][0])['color']
+                video_path = os.path.join(out_dir, f"{project_name}_preview.mp4")
+                imageio.mimsave(video_path, video_frames, fps=fps)
 
             # Export GLB if requested
             if save_glb:
                 try:
                     glb = postprocessing_utils.to_glb(
-                        outputs['gaussian'][0],
+                        outputs.get('gaussian', [None])[0],  # Pass None if gaussian not available
                         outputs['mesh'][0],
                         simplify=mesh_simplify,
                         texture_size=texture_size,
+                        texture_mode=texture_mode,
                         fill_holes=True,
                         debug=False,
                         verbose=True,
