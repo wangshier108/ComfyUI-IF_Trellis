@@ -8,12 +8,15 @@ ComfyUI TRELLIS is a large 3D asset generation in various formats, such as Radia
 ![teaser (1)](https://github.com/user-attachments/assets/6eee56bd-0936-44a5-b843-be4e87be649f)
 
 ### Prerequisites
-- **System**: The code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3) (not fully tested).
+- **System**: The original code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3)
+- (This comfyui node is following this suggeted installation steps It works but you need to follow the steps as described in part 1 and two of the guide).
+- Windows users need to use the Win_requirements.txt.
+- Linux Users need to use the requirements.txt
 - **Hardware**: An NVIDIA GPU with at least 16GB of memory is necessary. The code has been verified on NVIDIA A100 and A6000 GPUs.  
 - **Software**:   
   - The [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit-archive) is needed to compile certain submodules. The code has been tested with CUDA versions 11.8 and 12.2.  This repo use **CUDA 12.4**.
   - [Conda](https://docs.anaconda.com/miniconda/install/#quick-command-line-install) is recommended for managing dependencies.  
-  - Python version 3.8 or higher is required. (I am using 3.12.5)
+  - Python version 3.8 or higher is required. 
 
   Give unrestricted script access to powershell so venv can work:
 
@@ -24,7 +27,8 @@ ComfyUI TRELLIS is a large 3D asset generation in various formats, such as Radia
 ### Installation Steps
 1. Clone the repo:
     ```
-    git clone --recurse-submodules https://github.com/sdbds/TRELLIS-for-windows.git
+    cd ComfyUI/Custom_nodes
+    git clone --recurse-submodules https://github.com/if-ai/ComfyUI-IF_Trellis.git
     ```
 ## MUST HAVE `--recurse-submodules`
 
@@ -34,9 +38,9 @@ You need to set up the environment first
 follow this guide for the first part
 
 Set the VSCode Cpp Envirronment as in the guide
-
-https://ko-fi.com/post/Installing-Triton-and-Sage-Attention-Flash-Attenti-P5P8175434
-
+  ```
+  https://ko-fi.com/post/Installing-Triton-and-Sage-Attention-Flash-Attenti-P5P8175434
+  ```
 Setting up ComfyUI with the Xformers, flash attention, Sage-attention(Optional Recommended for Hunyuan and other Video models)
 
 
@@ -63,7 +67,7 @@ Windows PowerShell
 Copyright (C) Microsoft Corporation. All rights reserved.
 
 ```
-pip install -r requirements.txt
+pip install -r win_requirements.txt
 ```
 
 ```bash
