@@ -7,7 +7,27 @@ ComfyUI TRELLIS is a large 3D asset generation in various formats, such as Radia
 
 ![teaser (1)](https://github.com/user-attachments/assets/6eee56bd-0936-44a5-b843-be4e87be649f)
 
-# Installation 
+### Prerequisites
+- **System**: The code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3) (not fully tested).
+- **Hardware**: An NVIDIA GPU with at least 16GB of memory is necessary. The code has been verified on NVIDIA A100 and A6000 GPUs.  
+- **Software**:   
+  - The [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit-archive) is needed to compile certain submodules. The code has been tested with CUDA versions 11.8 and 12.2.  This repo use **CUDA 12.4**.
+  - [Conda](https://docs.anaconda.com/miniconda/install/#quick-command-line-install) is recommended for managing dependencies.  
+  - Python version 3.8 or higher is required. 
+
+  Give unrestricted script access to powershell so venv can work:
+
+- Open an administrator powershell window
+- Type `Set-ExecutionPolicy Unrestricted` and answer A
+- Close admin powershell window
+
+### Installation Steps
+1. Clone the repo:
+    ```
+    git clone --recurse-submodules https://github.com/sdbds/TRELLIS-for-windows.git
+    ```
+## MUST HAVE `--recurse-submodules`
+
 ONLY tested on windows but it should work easier in Linux without any issues or needing such specific stuffs.
 
 You need to set up the environment first
@@ -18,6 +38,7 @@ Set the VSCode Cpp Envirronment as in the guide
 https://ko-fi.com/post/Installing-Triton-and-Sage-Attention-Flash-Attenti-P5P8175434
 
 Setting up ComfyUI with the Xformers, flash attention, Sage-attention(Optional Recommended for Hunyuan and other Video models)
+
 
 <!-- Installation -->
 ## 📦 Second part of the installation
@@ -57,28 +78,10 @@ git clone https://github.com/NVlabs/nvdiffrast.git C:\tmp\extensions\nvdiffrast
 pip install C:\tmp\extensions\nvdiffrast
 ```
 
-### Prerequisites
-- **System**: The code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3) (not fully tested).
-- **Hardware**: An NVIDIA GPU with at least 16GB of memory is necessary. The code has been verified on NVIDIA A100 and A6000 GPUs.  
-- **Software**:   
-  - The [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit-archive) is needed to compile certain submodules. The code has been tested with CUDA versions 11.8 and 12.2.  This repo use **CUDA 12.4**.
-  - [Conda](https://docs.anaconda.com/miniconda/install/#quick-command-line-install) is recommended for managing dependencies.  
-  - Python version 3.8 or higher is required. 
 
-  Give unrestricted script access to powershell so venv can work:
+![blender_oWFuSjA6yq](https://github.com/user-attachments/assets/7d5fb61a-f2f6-4000-ab32-8555d5c6b7da)
 
-- Open an administrator powershell window
-- Type `Set-ExecutionPolicy Unrestricted` and answer A
-- Close admin powershell window
-
-### Installation Steps
-1. Clone the repo:
-    ```
-    git clone --recurse-submodules https://github.com/sdbds/TRELLIS-for-windows.git
-    ```
-## MUST HAVE `--recurse-submodules`
-![blender_Ny9GX9TsN1](https://github.com/user-attachments/assets/ac0d8c65-a9f4-4277-8453-ee62a9f7aef9)
-![thorium_lou9h3r4uF](https://github.com/user-attachments/assets/3e81cc5e-898b-48ff-8ab2-d6394cd1ff8f)
+![thorium_kTHxaiDIEV](https://github.com/user-attachments/assets/55b95ba4-13c2-4541-ab3a-4cc5750c6727)
 
 
 ## 🌟 Features
