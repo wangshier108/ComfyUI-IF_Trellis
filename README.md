@@ -9,9 +9,9 @@ ComfyUI TRELLIS is a large 3D asset generation in various formats, such as Radia
 
 ### Prerequisites
 - **System**: The original code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3)
-- (This comfyui node is following this suggeted installation steps It works but you need to follow the steps as described in part 1 and two of the guide).
+- (This comfyui node is following this suggeted installation steps It works but you need to follow the steps as described in part one and two of the guide).
 - Windows users need to use the Win_requirements.txt.
-- Linux Users need to use the requirements.txt
+- Linux Users (Not tested Yet) use the linux_requirements.txt but I am still testing if it works with comfy in Linux I just added the original repo requirements.  
 - **Hardware**: An NVIDIA GPU with at least 16GB of memory is necessary. The code has been verified on NVIDIA A100 and A6000 GPUs.  
 - **Software**:   
   - The [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit-archive) is needed to compile certain submodules. The code has been tested with CUDA versions 11.8 and 12.2.  This repo use **CUDA 12.4**.
