@@ -33,7 +33,9 @@ ComfyUI TRELLIS is a large 3D asset generation in various formats, such as Radia
 ## MUST HAVE `--recurse-submodules`
 
 ONLY tested on windows but it should work easier in Linux without any issues or needing such specific stuffs.
-
+***NOT tested or compatible with PORTABLE comfy embeded python env***
+watch quick overview of setting the env 
+https://youtu.be/-vEpuYL9I3g?si=B2XWZBfJ1It7ydwD
 You need to set up the environment first
 follow this guide for the first part
 
