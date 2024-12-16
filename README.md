@@ -46,7 +46,6 @@ Set the VSCode Cpp Envirronment as in the guide
   ```
 Setting up ComfyUI with the Xformers, flash attention, Sage-attention(Optional Recommended for Hunyuan and other Video models)
 
-
 <!-- Installation -->
 ## 📦 Second part of the installation
 
@@ -90,7 +89,7 @@ pip install C:\tmp\extensions\nvdiffrast
 
 ![thorium_kTHxaiDIEV](https://github.com/user-attachments/assets/55b95ba4-13c2-4541-ab3a-4cc5750c6727)
 
-
+![thorium_KJkxd74Y2D](https://github.com/user-attachments/assets/d68438e7-8671-4fbb-943a-fdaf7df2e682)
 ## 🌟 Features
 - **High Quality**: It produces diverse 3D assets at high quality with intricate shape and texture details.
 - **Versatility**: It takes text or image prompts and can generate various final 3D representations including but not limited to *Radiance Fields*, *3D Gaussians*, and *meshes*, accommodating diverse downstream requirements.
