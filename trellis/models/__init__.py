@@ -1,4 +1,6 @@
 import importlib
+import torch
+import torch.nn as nn
 
 __attributes = {
     'SparseStructureEncoder': 'sparse_structure_vae',
@@ -29,37 +31,77 @@ def __getattr__(name):
     return globals()[name]
 
 
-def from_pretrained(path: str, **kwargs):
+def from_pretrained(path: str, model_name: str) -> nn.Module:
     """
-    Load a model from a pretrained checkpoint.
-
+    Load a pretrained model.
+    
     Args:
-        path: The path to the checkpoint. Can be either local path or a Hugging Face model name.
-              NOTE: config file and model file should take the name f'{path}.json' and f'{path}.safetensors' respectively.
-        **kwargs: Additional arguments for the model constructor.
+        path (str): Path to model directory or HuggingFace repo ID
+        model_name (str): Name of the model file
     """
     import os
     import json
     from safetensors.torch import load_file
-    is_local = os.path.exists(f"{path}.json") and os.path.exists(f"{path}.safetensors")
+
+    is_local = os.path.exists(path)
 
     if is_local:
-        config_file = f"{path}.json"
-        model_file = f"{path}.safetensors"
+        # For local paths
+        print(f"Loading local model: {model_name}")
+        #print(f"From path: {path}")
+        model_name = model_name.replace('ckpts/', '').replace('ckpts\\', '')
+        #print(f"Cleaned model name: {model_name}")
+        config_path = os.path.normpath(os.path.join(path, "ckpts", f"{model_name}.json"))
+        weights_path = os.path.normpath(os.path.join(path, "ckpts", f"{model_name}.safetensors"))
+        #print(f"Looking for config at: {config_path}")
+        #print(f"Looking for weights at: {weights_path}")
+        
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+        if not os.path.exists(weights_path):
+            raise FileNotFoundError(f"Weights file not found: {weights_path}")
+            
+        # Load config
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+            
+        # Create model
+        model = create_model_from_config(config)
+        
+        # Load weights
+        state_dict = load_file(weights_path)
+        model.load_state_dict(state_dict)
+        
     else:
+        # For HuggingFace paths
         from huggingface_hub import hf_hub_download
-        path_parts = path.split('/')
-        repo_id = f'{path_parts[0]}/{path_parts[1]}'
-        model_name = '/'.join(path_parts[2:])
-        config_file = hf_hub_download(repo_id, f"{model_name}.json")
-        model_file = hf_hub_download(repo_id, f"{model_name}.safetensors")
-
-    with open(config_file, 'r') as f:
-        config = json.load(f)
-    model = __getattr__(config['name'])(**config['args'], **kwargs)
-    model.load_state_dict(load_file(model_file))
-
+        
+        config_file = hf_hub_download(path, f"{model_name}.json")
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+            
+        model = create_model_from_config(config)
+        
+        weights_file = hf_hub_download(path, f"{model_name}.safetensors")
+        state_dict = load_file(weights_file)
+        model.load_state_dict(state_dict)
+    
     return model
+
+def create_model_from_config(config):
+    """Helper function to create model from config"""
+    print(f"Creating model from config: {config}")
+    model_type = config.get('type') or config.get('name')
+    print(f"Model type: {model_type}")
+    print(f"Available model types: {list(__attributes.keys())}")
+    if not model_type in __attributes:
+        raise ValueError(f"Unknown model type: {model_type}")
+    
+    model_class = __getattr__(model_type)
+    print(f"Model class: {model_class}")
+    args = config.get('args', {})
+    print(f"Model args: {args}")
+    return model_class(**args)
 
 
 # For Pylance
