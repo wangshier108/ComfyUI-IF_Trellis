@@ -31,30 +31,30 @@ def __getattr__(name):
     return globals()[name]
 
 
-def from_pretrained(path: str, model_name: str) -> nn.Module:
+def from_pretrained(path: str) -> nn.Module:
     """
     Load a pretrained model.
     
     Args:
-        path (str): Path to model directory or HuggingFace repo ID
-        model_name (str): Name of the model file
+        path (str): Full path to model file or HuggingFace repo ID with model name
     """
     import os
     import json
     from safetensors.torch import load_file
 
-    is_local = os.path.exists(path)
+    # Split path into directory and model name
+    path = os.path.normpath(path)
+    model_dir = os.path.dirname(os.path.dirname(path))  # Go up two levels (past ckpts/)
+    model_name = os.path.basename(path)
+
+    is_local = os.path.exists(model_dir)
 
     if is_local:
         # For local paths
         print(f"Loading local model: {model_name}")
-        #print(f"From path: {path}")
         model_name = model_name.replace('ckpts/', '').replace('ckpts\\', '')
-        #print(f"Cleaned model name: {model_name}")
-        config_path = os.path.normpath(os.path.join(path, "ckpts", f"{model_name}.json"))
-        weights_path = os.path.normpath(os.path.join(path, "ckpts", f"{model_name}.safetensors"))
-        #print(f"Looking for config at: {config_path}")
-        #print(f"Looking for weights at: {weights_path}")
+        config_path = os.path.normpath(os.path.join(model_dir, "ckpts", f"{model_name}.json"))
+        weights_path = os.path.normpath(os.path.join(model_dir, "ckpts", f"{model_name}.safetensors"))
         
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found: {config_path}")
@@ -90,17 +90,17 @@ def from_pretrained(path: str, model_name: str) -> nn.Module:
 
 def create_model_from_config(config):
     """Helper function to create model from config"""
-    print(f"Creating model from config: {config}")
+    #print(f"Creating model from config: {config}")
     model_type = config.get('type') or config.get('name')
-    print(f"Model type: {model_type}")
-    print(f"Available model types: {list(__attributes.keys())}")
+    #print(f"Model type: {model_type}")
+    #print(f"Available model types: {list(__attributes.keys())}")
     if not model_type in __attributes:
         raise ValueError(f"Unknown model type: {model_type}")
     
     model_class = __getattr__(model_type)
-    print(f"Model class: {model_class}")
+    #print(f"Model class: {model_class}")
     args = config.get('args', {})
-    print(f"Model args: {args}")
+    #print(f"Model args: {args}")
     return model_class(**args)
 
 
