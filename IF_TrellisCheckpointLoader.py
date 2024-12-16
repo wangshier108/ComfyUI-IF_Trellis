@@ -46,11 +46,11 @@ class IF_TrellisCheckpointLoader:
             self.ckpts_path.mkdir(parents=True, exist_ok=True)
 
             # List files in model directory
-            print("\nFiles in model directory:")
-            for root, dirs, files in os.walk(self.model_path):
-                print(f"\nIn {root}:")
+            #print("\nFiles in model directory:")
+            '''for root, dirs, files in os.walk(self.model_path):
+                #print(f"\nIn {root}:")
                 for f in files:
-                    print(f"  {f}")
+                    #print(f"  {f}")'''
 
             # Check if model needs to be downloaded
             config_file = self.model_path / "pipeline.json"
@@ -99,11 +99,11 @@ class IF_TrellisCheckpointLoader:
                 logging.info("Model download complete")
                 
                 # List files after download
-                print("\nFiles after download:")
+                '''print("\nFiles after download:")
                 for root, dirs, files in os.walk(self.model_path):
                     print(f"\nIn {root}:")
                     for f in files:
-                        print(f"  {f}")
+                        print(f"  {f}")'''
                 
                 # Verify essential files exist
                 if not config_file.exists():
@@ -118,8 +118,8 @@ class IF_TrellisCheckpointLoader:
                 try:
                     with open(config_file, 'r') as f:
                         pipeline_config = json.load(f)
-                    print("\nPipeline config:")
-                    print(json.dumps(pipeline_config, indent=2))
+                    #print("\nPipeline config:")
+                    #print(json.dumps(pipeline_config, indent=2))
                 except Exception as e:
                     print(f"Error reading pipeline.json: {e}")
                 

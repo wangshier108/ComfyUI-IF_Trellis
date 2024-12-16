@@ -44,7 +44,7 @@ class IF_Preview_3D:
     RETURN_TYPES = ("IMAGE", "MASK", "STRING")
     RETURN_NAMES = ("image", "mask", "mesh_path")
     FUNCTION = "process"
-    CATEGORY = "3d/loaders"
+    CATEGORY = "ImpactFrames💥🎞️/Trellis"
 
     def process(self, model_file, glb_path, image, **kwargs):
         # If glb_path is provided and exists, use it instead of model_file
