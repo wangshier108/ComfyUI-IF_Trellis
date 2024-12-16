@@ -1,5 +1,4 @@
 #__init__.py
-
 import os
 import sys
 import logging
@@ -93,7 +92,7 @@ try:
     NODE_DISPLAY_NAME_MAPPINGS = {
         "IF_TrellisCheckpointLoader": "Trellis Model Loader 💾",
         "IF_TrellisImageTo3D": "Trellis Image to 3D 🖼️➡️🎲",
-        "IF_Preview_3D": "Trellis 3D Preview 🔍"
+        "IF_Preview_3D": "Trellis 3D Preview 🎲🔍"
     }
 
 except Exception as e:

@@ -32,7 +32,7 @@ class IF_TrellisImageTo3D:
                 "ss_sampling_steps": ("INT", {"default": 12, "min": 1, "max": 100}),
                 "slat_guidance_strength": ("FLOAT", {"default": 3.0, "min": 0.0, "max": 12.0, "step": 0.1}),
                 "slat_sampling_steps": ("INT", {"default": 12, "min": 1, "max": 100}),
-                "mesh_simplify": ("FLOAT", {"default": 0.95, "min": 0.9, "max": 0.98, "step": 0.01}),
+                "mesh_simplify": ("FLOAT", {"default": 0.95, "min": 0.9, "max": 1.0, "step": 0.01}),
                 "texture_size": ("INT", {"default": 1024, "min": 512, "max": 2048, "step": 512}),
                 "fps": ("INT", {"default": 15, "min": 1, "max": 60}),
                 "save_glb": ("BOOLEAN", {"default": True}),
