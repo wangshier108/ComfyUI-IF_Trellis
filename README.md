@@ -87,9 +87,8 @@ pip install C:\tmp\extensions\nvdiffrast
 
 ![blender_oWFuSjA6yq](https://github.com/user-attachments/assets/7d5fb61a-f2f6-4000-ab32-8555d5c6b7da)
 
-![thorium_kTHxaiDIEV](https://github.com/user-attachments/assets/55b95ba4-13c2-4541-ab3a-4cc5750c6727)
+![thorium_jtbGswydSr](https://github.com/user-attachments/assets/15f1d538-faa1-4c79-86f9-05f9b74ae794)
 
-![thorium_KJkxd74Y2D](https://github.com/user-attachments/assets/d68438e7-8671-4fbb-943a-fdaf7df2e682)
 ## 🌟 Features
 - **High Quality**: It produces diverse 3D assets at high quality with intricate shape and texture details.
 - **Versatility**: It takes text or image prompts and can generate various final 3D representations including but not limited to *Radiance Fields*, *3D Gaussians*, and *meshes*, accommodating diverse downstream requirements.
