@@ -29,28 +29,17 @@ class Pipeline:
 
         if is_local:
             config_file = f"{path}/pipeline.json"
-            with open(config_file, 'r') as f:
-                print("Loading pipeline.json:")
-                args = json.load(f)['args']
-                print("Models in pipeline.json:")
-                for k, v in args['models'].items():
-                    print(f"  {k}: {v}")
-
-            # For local paths, construct the models dict differently
-            _models = {
-                k: models.from_pretrained(path, v)
-                for k, v in args['models'].items()
-            }
         else:
             from huggingface_hub import hf_hub_download
             config_file = hf_hub_download(path, "pipeline.json")
-            with open(config_file, 'r') as f:
-                args = json.load(f)['args']
 
-            _models = {
-                k: models.from_pretrained(path, v)
-                for k, v in args['models'].items()
-            }
+        with open(config_file, 'r') as f:
+            args = json.load(f)['args']
+
+        _models = {
+            k: models.from_pretrained(f"{path}/{v}")
+            for k, v in args['models'].items()
+        }
 
         new_pipeline = Pipeline(_models)
         new_pipeline._pretrained_args = args
