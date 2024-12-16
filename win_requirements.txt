@@ -12,5 +12,4 @@ xatlas
 pyvista
 pymeshfix
 igraph
-kaolin
 spconv-cu124
