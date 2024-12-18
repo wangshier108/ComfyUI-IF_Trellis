@@ -1,7 +1,7 @@
 [project]
 name = "comfyui_if_trellis"
 description = "ComfyUI TRELLIS generates 3D models from pictures, using Radiance Fields, 3D Gaussians, and meshes. The cornerstone of TRELLIS is a unified Structured LATent (SLAT) representation that allows decoding to different output formats and Rectified Flow Transformers tailored for SLAT as the powerful backbones."
-version = "0.0.1"
+version = "0.0.2"
 license = { file = "LICENSE.txt" } 
 dependencies = ["pillow", 
 "imageio",
@@ -22,7 +22,7 @@ dependencies = ["pillow",
 "igraph",
 "git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8",
 "xformers",
-"spconv-cu124"]
+"spconv-cu124",]
 
 
 [project.urls]
