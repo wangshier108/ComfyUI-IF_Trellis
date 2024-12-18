@@ -1,6 +1,6 @@
 [project]
 name = "comfyui_if_trellis"
-description = "ComfyUI TRELLIS generates 3D models from pictures, using Radiance Fields, 3D Gaussians, and meshes. The cornerstone of TRELLIS is a unified Structured LATent (SLAT) representation that allows decoding to different output formats and Rectified Flow Transformers tailored for SLAT as the powerful backbones."
+description = "ComfyUI TRELLIS generates 3D modelsfrom pictures"
 version = "0.0.1"
 license = { file = "LICENSE.txt" } 
 dependencies = [
