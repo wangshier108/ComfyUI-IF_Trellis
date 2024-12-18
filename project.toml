@@ -1,8 +1,8 @@
 [project]
 name = "comfyui_if_trellis"
 description = "ComfyUI TRELLIS generates 3D modelsfrom pictures"
-version = "0.0.1"
-license = { file = "LICENSE.txt" } 
+version = "0.0.3"
+license = { file = "LICENSE.txt" }
 dependencies = [
   "pillow", 
   "imageio",
