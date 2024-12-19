@@ -44,9 +44,12 @@ Set the VSCode Cpp Envirronment as in the guide
   ```
   https://ko-fi.com/post/Installing-Triton-and-Sage-Attention-Flash-Attenti-P5P8175434
   ```
-[![Watch this guide if you need extra help](https://img.youtube.com/vi/FjNfDsX-jR0/hqdefault.jpg)](https://www.youtube.com/watch?v=FjNfDsX-jR0)
 
 Setting up ComfyUI with the Xformers, flash attention, Sage-attention(Optional Recommended for Hunyuan and other Video models)
+
+*** You can Also Try This Other Guide ***
+[![Watch this guide if you need extra help](https://img.youtube.com/vi/FjNfDsX-jR0/hqdefault.jpg)](https://www.youtube.com/watch?v=FjNfDsX-jR0)
+
 
 <!-- Installation -->
 ## 📦 Second part of the installation
