@@ -41,14 +41,18 @@ You need to set up the environment first
 follow this guide for the first part
 
 Set the VSCode Cpp Envirronment as in the guide
-  ```
-  https://ko-fi.com/post/Installing-Triton-and-Sage-Attention-Flash-Attenti-P5P8175434
-  ```
+
+[Installing Triton and Sage Attention Flash Attention](https://ko-fi.com/post/Installing-Triton-and-Sage-Attention-Flash-Attenti-P5P8175434)
+
 
 Setting up ComfyUI with the Xformers, flash attention, Sage-attention(Optional Recommended for Hunyuan and other Video models)
 
 *** You can Also Try This Other Guide ***
+
 [![Watch this guide if you need extra help](https://img.youtube.com/vi/FjNfDsX-jR0/hqdefault.jpg)](https://www.youtube.com/watch?v=FjNfDsX-jR0)
+
+[How to Run Micromamba in ComfyUI with Triton, SAGE Attention, Flash Attention, and xFormers for ComfyUI 3D](https://comfyuiblog.com/how-to-run-micromamba-in-comfyui-with-triton-sage-attention-flash-attention-and-x-formers-for-comfyui-3d/)
+
 
 
 <!-- Installation -->
