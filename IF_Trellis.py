@@ -18,6 +18,14 @@ from trellis.utils import render_utils, postprocessing_utils
 
 logger = logging.getLogger("IF_Trellis")
 
+def get_subpath_after_dir(full_path, target_dir):
+    path_parts = full_path.split(os.sep)
+    try:
+        index = path_parts.index(target_dir)
+        return os.path.join(*path_parts[index + 1:])
+    except ValueError:
+        return None
+        
 class IF_TrellisImageTo3D:
     """ComfyUI node for converting images to 3D using TRELLIS."""
     
@@ -229,6 +237,8 @@ class IF_TrellisImageTo3D:
                     )
                     glb_path = os.path.join(out_dir, f"{project_name}.glb") 
                     glb.export(glb_path)
+                    glb_path = get_subpath_after_dir(glb_path, "output")
+                    
                 except Exception as e:
                     logger.error(f"Error exporting GLB: {str(e)}")
                     logger.error(traceback.format_exc())
