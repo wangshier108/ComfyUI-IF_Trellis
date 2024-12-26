@@ -106,7 +106,11 @@ pip install C:\tmp\extensions\nvdiffrast
 <!-- TODO List -->
 ## 🚧 TODO List
 - [x] Release comfyUI-IF_Trellis
-- [ ] 3D Viewport 
-- [ ] OPT mode
-- [ ] Fix BUGS
+- [x] 3D Viewport 
+- [x] OPT mode
+- [x] Multiviews
+- [x] Sage attn
 - [ ] Installation
+- [ ] colab notebook
+- [ ] MarchingCubes mode
+- [ ] Exposing Texture paranmeters  
