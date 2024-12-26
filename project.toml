@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-if_trellis"
-description = "ComfyUI IF Trellis creates a 3d mesh from a single and multi angle pictures"
+description = "ComfyUI IF Trellis creates a 3d mesh from a single view or multi angle pictures"
 version = "0.0.1"
 license = { file = "LICENSE.txt" } 
 dependencies = ["pillow","imageio","imageio-ffmpeg","tqdm","ninja","plyfile","diso","rembg","easydict","opencv-python-headless","scipy","onnxruntime-gpu","trimesh","xatlas","pyvista","pymeshfix","igraph","git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8","xformers","spconv-cu120"]
