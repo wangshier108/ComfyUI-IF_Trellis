@@ -1,3 +1,4 @@
+# trellis_image_to_3d.py
 from typing import *
 import torch
 import torch.nn as nn
@@ -13,6 +14,12 @@ from .base import Pipeline
 from . import samplers
 from ..modules import sparse as sp
 from ..representations import Gaussian, Strivec, MeshExtractResult
+from contextlib import contextmanager
+from typing import Literal
+import folder_paths
+from trellis_model_manager import TrellisModelManager
+import os
+import logging
 
 
 class TrellisImageTo3DPipeline(Pipeline):
@@ -48,18 +55,22 @@ class TrellisImageTo3DPipeline(Pipeline):
         self._init_image_cond_model(image_cond_model)
 
     @staticmethod
-    def from_pretrained(path: str) -> "TrellisImageTo3DPipeline":
+    def from_pretrained(path: str, dinov2_model: str = None) -> "TrellisImageTo3DPipeline":
         """
         Load a pretrained model.
 
         Args:
             path (str): The path to the model. Can be either local path or a Hugging Face repository.
+            dinov2_model (str, optional): Override the DINOv2 model specified in config
         """
         pipeline = super(TrellisImageTo3DPipeline, TrellisImageTo3DPipeline).from_pretrained(path)
         new_pipeline = TrellisImageTo3DPipeline()
         new_pipeline.__dict__ = pipeline.__dict__
         args = pipeline._pretrained_args
 
+        # Store model directory path
+        new_pipeline.model_dir = os.path.dirname(os.path.dirname(path))  # Go up two levels (past ckpts/)
+        
         new_pipeline._models_cpu = {}
 
         new_pipeline.sparse_structure_sampler = getattr(samplers, args['sparse_structure_sampler']['name'])(**args['sparse_structure_sampler']['args'])
@@ -70,7 +81,9 @@ class TrellisImageTo3DPipeline(Pipeline):
 
         new_pipeline.slat_normalization = args['slat_normalization']
 
-        new_pipeline._init_image_cond_model(args['image_cond_model'])
+        # Use user-specified model if provided, otherwise use config
+        model_name = dinov2_model or args['image_cond_model']
+        new_pipeline._init_image_cond_model(model_name)
 
         return new_pipeline
     
@@ -78,13 +91,33 @@ class TrellisImageTo3DPipeline(Pipeline):
         """
         Initialize the image conditioning model.
         """
-        dinov2_model = torch.hub.load('facebookresearch/dinov2', name, pretrained=True)
-        dinov2_model.eval()
-        self.models['image_cond_model'] = dinov2_model
-        transform = transforms.Compose([
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-        self.image_cond_model_transform = transform
+        if not hasattr(self, 'model_dir'):
+            raise AttributeError("Pipeline model_dir not set. Please ensure from_pretrained() is called first.")
+            
+        # Create model manager instance with proper config
+        config = getattr(self, 'config', {})
+        model_manager = TrellisModelManager(self.model_dir, config=config)
+        
+        try:
+            # This will handle downloading if needed
+            dinov2_model = model_manager.load_dinov2(name)
+            
+            # Ensure model is in consistent dtype based on config
+            if getattr(config, 'use_fp16', True):
+                dinov2_model = dinov2_model.half()
+            else:
+                dinov2_model = dinov2_model.float()
+                
+            self.models['image_cond_model'] = dinov2_model
+            
+            transform = transforms.Compose([
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ])
+            self.image_cond_model_transform = transform
+            
+        except Exception as e:
+            logger.error(f"Error loading DINOv2 model: {str(e)}")
+            raise
 
     def preprocess_image(self, input: Image.Image) -> Image.Image:
         """
@@ -144,7 +177,12 @@ class TrellisImageTo3DPipeline(Pipeline):
         else:
             raise ValueError(f"Unsupported type of image: {type(image)}")
         
-        image = self.image_cond_model_transform(image).to(self.device)
+        # Apply normalization and convert to model dtype
+        image = self.image_cond_model_transform(image)
+        model_dtype = next(self.models['image_cond_model'].parameters()).dtype
+        image = image.to(device=self.device, dtype=model_dtype)
+        
+        # Run model inference
         features = self.models['image_cond_model'](image, is_training=True)['x_prenorm']
         patchtokens = F.layer_norm(features, features.shape[-1:])
         return patchtokens
@@ -385,3 +423,123 @@ class TrellisImageTo3DPipeline(Pipeline):
         gc.collect()
         
         return results
+
+    @contextmanager
+    def inject_sampler_multi_image(
+        self,
+        sampler_name: str,
+        num_images: int,
+        num_steps: int,
+        mode: Literal['stochastic', 'multidiffusion'] = 'stochastic',
+    ):
+        """
+        Inject a sampler with multiple images as condition.
+        
+        Args:
+            sampler_name (str): The name of the sampler to inject.
+            num_images (int): The number of images to condition on.
+            num_steps (int): The number of steps to run the sampler for.
+        """
+        sampler = getattr(self, sampler_name)
+        setattr(sampler, f'_old_inference_model', sampler._inference_model)
+
+        if mode == 'stochastic':
+            if num_images > num_steps:
+                print(f"\033[93mWarning: number of conditioning images is greater than number of steps for {sampler_name}. "
+                    "This may lead to performance degradation.\033[0m")
+
+            cond_indices = (np.arange(num_steps) % num_images).tolist()
+            def _new_inference_model(self, model, x_t, t, cond, **kwargs):
+                cond_idx = cond_indices.pop(0)
+                cond_i = cond[cond_idx:cond_idx+1]
+                return self._old_inference_model(model, x_t, t, cond=cond_i, **kwargs)
+        
+        elif mode == 'multidiffusion':
+            from .samplers import FlowEulerSampler
+            def _new_inference_model(self, model, x_t, t, cond, neg_cond, cfg_strength, cfg_interval, **kwargs):
+                if cfg_interval[0] <= t <= cfg_interval[1]:
+                    preds = []
+                    for i in range(len(cond)):
+                        preds.append(FlowEulerSampler._inference_model(self, model, x_t, t, cond[i:i+1], **kwargs))
+                    pred = sum(preds) / len(preds)
+                    neg_pred = FlowEulerSampler._inference_model(self, model, x_t, t, neg_cond, **kwargs)
+                    return (1 + cfg_strength) * pred - cfg_strength * neg_pred
+                else:
+                    preds = []
+                    for i in range(len(cond)):
+                        preds.append(FlowEulerSampler._inference_model(self, model, x_t, t, cond[i:i+1], **kwargs))
+                    pred = sum(preds) / len(preds)
+                    return pred
+            
+        else:
+            raise ValueError(f"Unsupported mode: {mode}")
+            
+        sampler._inference_model = _new_inference_model.__get__(sampler, type(sampler))
+
+        yield
+
+        sampler._inference_model = sampler._old_inference_model
+        delattr(sampler, f'_old_inference_model')
+
+    @torch.no_grad()
+    def run_multi_image(
+        self,
+        images: List[Image.Image],
+        num_samples: int = 1,
+        seed: int = 42,
+        sparse_structure_sampler_params: dict = {},
+        slat_sampler_params: dict = {},
+        formats: List[str] = ['mesh', 'gaussian', 'radiance_field'],
+        preprocess_image: bool = True,
+        mode: Literal['stochastic', 'multidiffusion'] = 'stochastic',
+    ) -> dict:
+        """
+        Run the pipeline with multiple images as condition
+
+        Args:
+            images (List[Image.Image]): The multi-view images of the assets
+            num_samples (int): The number of samples to generate.
+            sparse_structure_sampler_params (dict): Additional parameters for the sparse structure sampler.
+            slat_sampler_params (dict): Additional parameters for the structured latent sampler.
+            preprocess_image (bool): Whether to preprocess the image.
+        """
+        if preprocess_image:
+            images = [self.preprocess_image(image) for image in images]
+        cond = self.get_cond(images)
+        cond['neg_cond'] = cond['neg_cond'][:1]
+        torch.manual_seed(seed)
+        ss_steps = {**self.sparse_structure_sampler_params, **sparse_structure_sampler_params}.get('steps')
+        with self.inject_sampler_multi_image('sparse_structure_sampler', len(images), ss_steps, mode=mode):
+            coords = self.sample_sparse_structure(cond, num_samples, sparse_structure_sampler_params)
+        slat_steps = {**self.slat_sampler_params, **slat_sampler_params}.get('steps')
+        with self.inject_sampler_multi_image('slat_sampler', len(images), slat_steps, mode=mode):
+            slat = self.sample_slat(cond, coords, slat_sampler_params)
+        return self.decode_slat(slat, formats)
+
+    @contextmanager
+    def inference_context(self):
+        """Context manager for inference that handles device placement and cleanup."""
+        try:
+            # Move models to device if needed
+            if hasattr(self, '_models_cpu'):
+                for key in self._models_cpu:
+                    if key in self.models:
+                        continue
+                    self.models[key] = self._models_cpu[key].to(self._device)
+                    if hasattr(self.models[key], 'eval'):
+                        self.models[key].eval()
+
+            with torch.no_grad():
+                yield
+
+        finally:
+            # Cleanup
+            if hasattr(self, '_models_cpu'):
+                for key in list(self.models.keys()):
+                    if key in self._models_cpu:
+                        self._models_cpu[key] = self.models[key].cpu()
+                        del self.models[key]
+            
+            # Force memory cleanup
+            torch.cuda.empty_cache()
+            gc.collect()

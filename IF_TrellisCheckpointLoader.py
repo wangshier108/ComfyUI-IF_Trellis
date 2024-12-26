@@ -8,6 +8,68 @@ import folder_paths
 from huggingface_hub import hf_hub_download, snapshot_download
 from pathlib import Path
 import json
+from trellis_model_manager import TrellisModelManager
+from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
+from trellis.modules import set_attention_backend
+from typing import Literal
+from trellis.modules.attention_utils import enable_sage_attention, disable_sage_attention
+
+logger = logging.getLogger("IF_Trellis")
+
+def set_backend(backend: Literal['spconv', 'torchsparse']):
+    # Example helper if you wish to call the underlying global set_backend from trellis.modules.sparse:
+    from trellis.modules.sparse import set_backend as _set_sparse_backend
+    # Also handle spconv algo if desired, e.g. os.environ['SPCONV_ALGO'] = ...
+    _set_sparse_backend(backend)
+
+class TrellisConfig:
+    """Global configuration for Trellis"""
+    def __init__(self):
+        self.attention_backend = "sage"
+        self.spconv_algo = "implicit_gemm"
+        self.smooth_k = True
+        self.device = "cuda"
+        self.use_fp16 = True
+        # Added new configuration dictionary
+        self._config = {
+            "dinov2_size": "large",  # Default model size
+            "dinov2_model": "dinov2_vitg14"  # Default model name
+        }
+        
+    # Added new methods
+    def get(self, key, default=None):
+        """Get configuration value with fallback"""
+        return self._config.get(key, default)
+        
+    def set(self, key, value):
+        """Set configuration value"""
+        self._config[key] = value
+        
+    def setup_environment(self):
+        """Set up all environment variables and backends"""
+        import os
+        from trellis.modules import set_attention_backend
+        from trellis.modules.sparse import set_backend
+        
+        # Set attention backend
+        set_attention_backend(self.attention_backend)
+        
+        # Set smooth k for sage attention
+        os.environ['SAGEATTN_SMOOTH_K'] = '1' if self.smooth_k else '0'
+        
+        # Set spconv algorithm
+        os.environ['SPCONV_ALGO'] = self.spconv_algo
+        
+        # Always use spconv as backend for now
+        set_backend('spconv')
+        
+        logger.info(f"Environment configured - Backend: spconv, "
+                   f"Attention: {self.attention_backend}, "
+                   f"Smooth K: {self.smooth_k}, "
+                   f"SpConv Algo: {self.spconv_algo}")
+
+# Global config instance
+TRELLIS_CONFIG = TrellisConfig()
 
 class IF_TrellisCheckpointLoader:
     """
@@ -15,22 +77,38 @@ class IF_TrellisCheckpointLoader:
     Follows ComfyUI conventions for model management.
     """
     def __init__(self):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model_repo = "JeffreyXiang/TRELLIS-image-large"
+        self.model_manager = None
+        # Check for available devices
+        self.device = self._get_device()
         
-        # Setup paths properly
-        self.base_path = Path(folder_paths.get_folder_paths("checkpoints")[0])
-        self.model_path = self.base_path / "TRELLIS-image-large"
-        self.ckpts_path = self.model_path / "ckpts"
-
+    def _get_device(self):
+        """Determine the best available device."""
+        if torch.cuda.is_available():
+            return "cuda"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+    
     @classmethod
     def INPUT_TYPES(cls):
+        """Define input types with device-specific options."""
+        device_options = []
+        if torch.cuda.is_available():
+            device_options.append("cuda")
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device_options.append("mps")
+        device_options.append("cpu")
+
         return {
             "required": {
                 "model_name": (["TRELLIS-image-large"],),
+                "dinov2_model": (["dinov2_vits14_reg", "dinov2_vitb14_reg", "dinov2_vitl14_reg", "dinov2_vitg14_reg"], {"default": "dinov2_vitl14_reg", "tooltip": "Select the Dinov2 model to use for the image to 3D conversion. Smaller models work but better results with larger models."}),
                 "use_fp16": ("BOOLEAN", {"default": True}),
-                "enable_xformers": ("BOOLEAN", {"default": True}),
-            }
+                "attn_backend": (["sage", "xformers", "flash_attn", "sdpa", "naive"], {"default": "sage", "tooltip": "Select the attention backend to use for the image to 3D conversion. Sage is experimental but faster"}),
+                "smooth_k": ("BOOLEAN", {"default": True, "tooltip": "Smooth k for sage attention. This is a hyperparameter that controls the smoothness of the attention distribution. It is a boolean value that determines whether to use smooth k or not. Smooth k is a hyperparameter that controls the smoothness of the attention distribution. It is a boolean value that determines whether to use smooth k or not."}),
+                "spconv_algo": (["implicit_gemm", "native"], {"default": "implicit_gemm", "tooltip": "Select the spconv algorithm to use for the image to 3D conversion. Implicit gemm is the best but slower. Native is the fastest but less accurate."}),
+                "main_device": (device_options, {"default": device_options[0]}),
+            },
         }
     
     RETURN_TYPES = ("TRELLIS_MODEL",)
@@ -38,136 +116,147 @@ class IF_TrellisCheckpointLoader:
     FUNCTION = "load_model"
     CATEGORY = "ImpactFrames💥🎞️/Trellis"
 
-    def ensure_model_exists(self):
-        """Ensure model files exist, downloading if necessary"""
+    @classmethod
+    def _check_backend_availability(cls, backend: str) -> bool:
+        """Check if a specific attention backend is available"""
         try:
-            # Create directories if they don't exist
-            self.model_path.mkdir(parents=True, exist_ok=True)
-            self.ckpts_path.mkdir(parents=True, exist_ok=True)
+            if backend == 'sage':
+                import sageattention
+            elif backend == 'xformers':
+                import xformers.ops
+            elif backend == 'flash_attn':
+                import flash_attn
+            elif backend in ['sdpa', 'naive']:
+                # These are always available in PyTorch
+                pass
+            else:
+                return False
+            return True
+        except ImportError:
+            return False
 
-            # List files in model directory
-            #print("\nFiles in model directory:")
-            '''for root, dirs, files in os.walk(self.model_path):
-                #print(f"\nIn {root}:")
-                for f in files:
-                    #print(f"  {f}")'''
+    @classmethod
+    def _initialize_backend(cls, requested_backend: str = None) -> str:
+        """Initialize attention backend with fallback logic"""
+        # Priority order for backends
+        backend_priority = ['sage', 'flash_attn', 'xformers', 'sdpa']
+        
+        # If a specific backend is requested, try it first
+        if requested_backend:
+            if cls._check_backend_availability(requested_backend):
+                logger.info(f"Using requested attention backend: {requested_backend}")
+                return requested_backend
+            else:
+                logger.warning(f"Requested backend '{requested_backend}' not available, falling back")
+        
+        # Try backends in priority order
+        for backend in backend_priority:
+            if cls._check_backend_availability(backend):
+                logger.info(f"Using attention backend: {backend}")
+                return backend
+        
+        # Final fallback to SDPA
+        logger.info("All optimized attention backends unavailable, using PyTorch SDPA")
+        return 'sdpa'
 
-            # Check if model needs to be downloaded
-            config_file = self.model_path / "pipeline.json"
-            
-            if not config_file.exists() or not any(self.ckpts_path.glob("*.safetensors")):
-                logging.info(f"Downloading TRELLIS model from {self.model_repo}")
-                
-                # Download to a temporary directory first
-                temp_dir = self.base_path / "temp_download"
-                temp_dir.mkdir(parents=True, exist_ok=True)
-                
-                logging.info(f"Downloading to temporary directory: {temp_dir}")
-                snapshot_download(
-                    repo_id=self.model_repo,
-                    local_dir=str(temp_dir),
-                    local_dir_use_symlinks=False,
-                    resume_download=True,
-                    max_workers=4
-                )
-                
-                # List all downloaded files
-                logging.info("Downloaded files:")
-                for file in temp_dir.rglob("*"):
-                    logging.info(f"Found file: {file}")
-                
-                # Move files to correct locations
-                for src in temp_dir.rglob("*"):
-                    if src.is_file():  # Only process files, not directories
-                        # Get relative path from temp_dir
-                        rel_path = src.relative_to(temp_dir)
-                        # Construct destination path
-                        dst = self.model_path / rel_path
-                        # Ensure parent directory exists
-                        dst.parent.mkdir(parents=True, exist_ok=True)
-                        # Move file
-                        logging.info(f"Moving {rel_path} to {dst}")
-                        if dst.exists():
-                            dst.unlink()  # Remove existing file if it exists
-                        src.replace(dst)
-                
-                # Cleanup
-                if temp_dir.exists():
-                    import shutil
-                    shutil.rmtree(str(temp_dir))
-                
-                logging.info("Model download complete")
-                
-                # List files after download
-                '''print("\nFiles after download:")
-                for root, dirs, files in os.walk(self.model_path):
-                    print(f"\nIn {root}:")
-                    for f in files:
-                        print(f"  {f}")'''
-                
-                # Verify essential files exist
-                if not config_file.exists():
-                    raise FileNotFoundError(f"pipeline.json not found after download")
-                
-                # Check if any .safetensors files exist in ckpts directory
-                safetensors_files = list(self.ckpts_path.glob("*.safetensors"))
-                if not safetensors_files:
-                    raise FileNotFoundError(f"No model files found in {self.ckpts_path}")
-                
-                # Verify pipeline.json content
-                try:
-                    with open(config_file, 'r') as f:
-                        pipeline_config = json.load(f)
-                    #print("\nPipeline config:")
-                    #print(json.dumps(pipeline_config, indent=2))
-                except Exception as e:
-                    print(f"Error reading pipeline.json: {e}")
-                
-        except Exception as e:
-            logging.error(f"Error ensuring model exists: {str(e)}")
-            raise
+    def _setup_environment(self):
+        """
+        Set up environment variables based on the global TRELLIS_CONFIG.
+        """
+        import os
+        from trellis.modules import set_attention_backend
+        from trellis.modules.sparse import set_backend
+        from trellis.modules.sparse.conv import SPCONV_ALGO
 
-    def optimize_pipeline(self, pipeline, use_fp16=True, enable_xformers=True):
+        # Set attention backend
+        os.environ['ATTN_BACKEND'] = TRELLIS_CONFIG.attention_backend
+        set_attention_backend(TRELLIS_CONFIG.attention_backend)
+
+        # Set smooth k for sage attention
+        os.environ['SAGEATTN_SMOOTH_K'] = '1' if TRELLIS_CONFIG.smooth_k else '0'
+
+        # Set spconv algorithm
+        os.environ['SPCONV_ALGO'] = TRELLIS_CONFIG.spconv_algo
+        
+        # Always use spconv as backend for now
+        set_backend('spconv')
+
+        logger.info(f"Environment configured - Backend: spconv, "
+                    f"Attention: {TRELLIS_CONFIG.attention_backend}, "
+                    f"Smooth K: {TRELLIS_CONFIG.smooth_k}, "
+                    f"SpConv Algo: {TRELLIS_CONFIG.spconv_algo}")
+
+    def optimize_pipeline(self, pipeline, use_fp16=True, attn_backend='sage'):
         """Apply optimizations to the pipeline if available"""
         if self.device == "cuda":
             try:
-                pipeline.cuda()
-                
+                if hasattr(pipeline, 'cuda'):
+                    pipeline.cuda()
+                    
                 if use_fp16:
                     if hasattr(pipeline, 'enable_attention_slicing'):
                         pipeline.enable_attention_slicing()
                     if hasattr(pipeline, 'half'):
                         pipeline.half()
                     
-                if enable_xformers and hasattr(pipeline, 'enable_xformers_memory_efficient_attention'):
+                # Only enable xformers if using xformers backend
+                if attn_backend == 'xformers' and hasattr(pipeline, 'enable_xformers_memory_efficient_attention'):
                     pipeline.enable_xformers_memory_efficient_attention()
                     
             except Exception as e:
-                logging.warning(f"Some optimizations failed: {str(e)}")
+                logger.warning(f"Some optimizations failed: {str(e)}")
                 
         return pipeline
 
-    def load_model(self, model_name, use_fp16=True, enable_xformers=True):
-        """
-        Load and optimize the TRELLIS model.
-        """
+    def load_model(self, model_name, dinov2_model="dinov2_vitg14", attn_backend="sage", use_fp16=True,
+                  smooth_k=True, spconv_algo="implicit_gemm", main_device="cuda"):
+        """Load and configure the TRELLIS model."""
         try:
-            # Ensure model exists
-            self.ensure_model_exists()
+            # Update global config
+            TRELLIS_CONFIG.attention_backend = attn_backend
+            TRELLIS_CONFIG.spconv_algo = spconv_algo
+            TRELLIS_CONFIG.smooth_k = smooth_k
+            TRELLIS_CONFIG.device = main_device
+            TRELLIS_CONFIG.use_fp16 = use_fp16
+            TRELLIS_CONFIG.set("dinov2_model", dinov2_model)
+
+            # Set up environment
+            self._setup_environment()
+
+            # Configure attention backend
+            set_attention_backend(attn_backend)
+            if attn_backend == 'sage':
+                enable_sage_attention()
+            else:
+                disable_sage_attention()
+
+            # Get model path
+            model_path = folder_paths.get_full_path("checkpoints", model_name)
+            if model_path is None:
+                model_path = os.path.join(folder_paths.models_dir, "checkpoints", model_name)
+
+            # Create pipeline with specified dinov2 model
+            pipeline = TrellisImageTo3DPipeline.from_pretrained(model_path, dinov2_model=dinov2_model)
             
-            print(f"Model path after ensuring existence: {self.model_path}")
-            print(f"Path exists: {os.path.exists(str(self.model_path))}")
+            # Configure pipeline after loading
+            pipeline._device = torch.device(main_device)
+            pipeline.attention_backend = attn_backend
             
-            # Initialize pipeline
-            from trellis.pipelines import TrellisImageTo3DPipeline
-            
-            pipeline = TrellisImageTo3DPipeline.from_pretrained(str(self.model_path))
-            
+            # Store configuration in pipeline
+            pipeline.config = {
+                'device': main_device,
+                'use_fp16': use_fp16,
+                'attention_backend': attn_backend,
+                'dinov2_model': dinov2_model,
+                'spconv_algo': spconv_algo,
+                'smooth_k': smooth_k
+            }
+
             # Apply optimizations
-            pipeline = self.optimize_pipeline(pipeline, use_fp16, enable_xformers)
-            
+            pipeline = self.optimize_pipeline(pipeline, use_fp16, attn_backend)
+
             return (pipeline,)
-            
+
         except Exception as e:
-            logging.error(f"Error loading TRELLIS model: {str(e)}")
+            logger.error(f"Error loading TRELLIS model: {str(e)}")
             raise
