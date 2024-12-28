@@ -46,7 +46,6 @@ except Exception as e:
 try:
     from IF_TrellisCheckpointLoader import IF_TrellisCheckpointLoader
     from IF_Trellis import IF_TrellisImageTo3D
-    WEB_DIRECTORY = "web"
     NODE_CLASS_MAPPINGS = {
         "IF_TrellisCheckpointLoader": IF_TrellisCheckpointLoader,
         "IF_TrellisImageTo3D": IF_TrellisImageTo3D,
@@ -61,4 +60,4 @@ except Exception as e:
     logger.error(f"Error importing node classes: {e}")
     raise
 
-__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
+__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
