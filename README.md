@@ -11,9 +11,9 @@ ComfyUI TRELLIS is a large 3D asset generation in various formats, such as Radia
 - **System**: The original code is currently tested only on **Linux**.  For windows setup, you may refer to [#3](https://github.com/microsoft/TRELLIS/issues/3)
 - (This comfyui node is following this suggeted installation steps It works but you need to follow the steps as described in part one and two of the guide).
 - Windows users need to use the Win_requirements.txt.
-- Linux Users (Not tested Yet) use the linux_requirements.txt but I am still testing if it works with comfy in Linux I just added the original repo requirements.  
-- *̶*̶H̶a̶r̶d̶w̶a̶r̶e̶*̶*̶:̶ A̶n̶ N̶V̶I̶D̶I̶A̶ G̶P̶U̶ w̶i̶t̶h̶ a̶t̶ l̶e̶a̶s̶t̶ 1̶6̶G̶B̶ o̶f̶ m̶e̶m̶o̶r̶y̶ i̶s̶ n̶e̶c̶e̶s̶s̶a̶r̶y̶. T̶h̶e̶ c̶o̶d̶e̶ h̶a̶s̶ b̶e̶e̶n̶ v̶e̶r̶i̶f̶i̶e̶d̶ o̶n̶ N̶V̶I̶D̶I̶A̶ A̶1̶0̶0̶ a̶n̶d̶ A̶6̶0̶0̶0̶ G̶P̶U̶s̶.
-- **Hardware**: An NVIDIA GPU with at least 8GB of memory is necessary. The code has been verified on NVIDIA GPUs.  
+- Linux Users (Not tested Yet) use the linux_requirements.txt but I am still testing if it works with comfy in Linux I just added the original repo requirements.
+  
+- **Hardware**: This repo improve memmory mangement with the PR made by Amorano you will need NVIDIA GPU with at least 8GB.  
 - **Software**:   
   - The [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit-archive) is needed to compile certain submodules. The code has been tested with CUDA versions 11.8 and 12.2.  This repo use **CUDA 12.4**.
   - [Conda](https://docs.anaconda.com/miniconda/install/#quick-command-line-install) is recommended for managing dependencies.  
