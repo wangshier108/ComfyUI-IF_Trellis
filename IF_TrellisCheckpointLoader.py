@@ -25,6 +25,7 @@ def set_backend(backend: Literal['spconv', 'torchsparse']):
 class TrellisConfig:
     """Global configuration for Trellis"""
     def __init__(self):
+        self.logger = logger
         self.attention_backend = "sage"
         self.spconv_algo = "implicit_gemm"
         self.smooth_k = True
@@ -77,6 +78,7 @@ class IF_TrellisCheckpointLoader:
     Follows ComfyUI conventions for model management.
     """
     def __init__(self):
+        self.logger = logger
         self.model_manager = None
         # Check for available devices
         self.device = self._get_device()
