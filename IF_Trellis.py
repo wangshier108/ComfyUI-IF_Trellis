@@ -72,6 +72,7 @@ class IF_TrellisImageTo3D:
     OUTPUT_NODE = True
 
     def __init__(self, vertices=None, faces=None, uvs=None, face_uvs=None, albedo=None):
+        self.logger = logger
         self.output_dir = folder_paths.get_output_directory()
         self.temp_dir = folder_paths.get_temp_directory()
         self.device = None
