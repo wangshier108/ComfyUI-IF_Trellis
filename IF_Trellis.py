@@ -27,7 +27,7 @@ def get_subpath_after_dir(full_path: str, target_dir: str) -> str:
         path_parts = full_path.split('/')
         try:
             index = path_parts.index(target_dir)
-            subpath = '/'.join(path_parts[index:])
+            subpath = '/'.join(path_parts[index + 1:])
             return subpath
         except ValueError:
             return path_parts[-1]
@@ -216,8 +216,8 @@ class IF_TrellisImageTo3D:
             )
             glb.export(glb_path)
             glb_path = get_subpath_after_dir(glb_path, "output")
-            if not glb_path.startswith('output/'):
-                glb_path = f"output/{glb_path}"
+            #if not glb_path.startswith('output/'):
+            #    glb_path = f"output/{glb_path}"
             full_glb_path = os.path.abspath(glb_path)
             logger.info(f"Full GLB path: {full_glb_path}, Processed GLB path: {glb_path}")
 
@@ -334,8 +334,8 @@ class IF_TrellisImageTo3D:
 
 
                 self.cleanup_outputs(outputs)
-                if glb_path and not glb_path.startswith('output/'):
-                    glb_path = f"output/{glb_path}"
+                #if glb_path and not glb_path.startswith('output/'):
+                #    glb_path = f"output/{glb_path}"
                 return glb_path, video_path
 
         except Exception as e:
