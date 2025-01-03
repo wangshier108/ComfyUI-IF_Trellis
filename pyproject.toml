@@ -12,4 +12,4 @@ Repository = "https://github.com/if-ai/ComfyUI-IF_Trellis.git"
 [tool.comfy]
 PublisherId = "impactframes"
 DisplayName = "ComfyUI-IF_Trellis"
-Icon = "https://impactframes.ai/System/Icons/16x16/if.png"
+Icon = ""
