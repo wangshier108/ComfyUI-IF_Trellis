@@ -48,15 +48,15 @@ class IF_TrellisImageTo3D:
                 "ss_sampling_steps": ("INT", {"default": 12, "min": 1, "max": 100}),
                 "slat_guidance_strength": ("FLOAT", {"default": 3.0, "min": 0.0, "max": 12.0, "step": 0.1}),
                 "slat_sampling_steps": ("INT", {"default": 12, "min": 1, "max": 100}),
-                "mesh_simplify": ("FLOAT", {"default": 0.95, "min": 0.9, "max": 1.0, "step": 0.01, "tooltip": "Simplify the mesh. the lower the value more polygones the mesh will have"}),
+                "mesh_simplify": ("FLOAT", {"default": 0.95, "min": 0.9, "max": 1.0, "step": 0.01, "tooltip": "Simplify the mesh. the lower the value more polygons the mesh will have"}),
                 "texture_size": ("INT", {"default": 1024, "min": 512, "max": 2048, "step": 512, "tooltip": "Texture size. the higher the value the more detailed the texture will be"}),
                 "texture_mode": (["blank", "fast", "opt"], {"default": "fast", "tooltip": "Texture mode. blank is no texture. fast is a fast texture. opt is a high quality texture"}),
                 "fps": ("INT", {"default": 15, "min": 1, "max": 60, "tooltip": "FPS. the higher the value the smoother the video will be"}),
                 "multimode": (["stochastic", "multidiffusion"], {"default": "stochastic"}),
                 "project_name": ("STRING", {"default": "trellis_output"}),
-                "save_glb": ("BOOLEAN", {"default": True, "tooltip": "Save the GLB file this is the 3d model"}),
+                "save_glb": ("BOOLEAN", {"default": True, "tooltip": "Save the GLB file this is the 3D model"}),
                 "render_video": ("BOOLEAN", {"default": False, "tooltip": "Render a video"}),
-                "save_gaussian": ("BOOLEAN", {"default": False, "tooltip": "Save the Gaussian file this is a ply file of the 3d model"}),
+                "save_gaussian": ("BOOLEAN", {"default": False, "tooltip": "Save the Gaussian file this is a ply file of the 3D model"}),
                 "save_texture": ("BOOLEAN", {"default": False, "tooltip": "Save the texture file"}),
                 "save_wireframe": ("BOOLEAN", {"default": False, "tooltip": "Save the wireframe file"}),
             },
@@ -65,8 +65,8 @@ class IF_TrellisImageTo3D:
             }
         }
 
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("model_file", "video_path")
+    RETURN_TYPES = ("STRING", "STRING", "IMAGE")
+    RETURN_NAMES = ("model_file", "video_path", "texture_image")
     FUNCTION = "image_to_3d"
     CATEGORY = "ImpactFrames💥🎞️/Trellis"
     OUTPUT_NODE = True
@@ -216,17 +216,22 @@ class IF_TrellisImageTo3D:
             )
             glb.export(glb_path)
             glb_path = get_subpath_after_dir(glb_path, "output")
-            #if not glb_path.startswith('output/'):
-            #    glb_path = f"output/{glb_path}"
             full_glb_path = os.path.abspath(glb_path)
             logger.info(f"Full GLB path: {full_glb_path}, Processed GLB path: {glb_path}")
 
-            if texture_path and os.path.exists(texture_path):
-                texture_image = Image.open(texture_path).convert('RGB')
-                texture_image = np.array(texture_image)
+            # Handle texture image creation
+            if self.save_texture and self.texture_mode != 'blank' and texture_path and os.path.exists(texture_path):
+                try:
+                    texture_image = Image.open(texture_path).convert('RGB')
+                    texture_image = np.array(texture_image)
+                except Exception as e:
+                    logger.warning(f"Failed to load texture image: {str(e)}")
+                    texture_image = np.zeros((self.texture_size, self.texture_size, 3), dtype=np.uint8)
             else:
-                texture_image = None
+                # Create a blank texture if not saving or if texture mode is blank
+                texture_image = np.zeros((self.texture_size, self.texture_size, 3), dtype=np.uint8)
 
+            # Handle wireframe image
             if wireframe_path and os.path.exists(wireframe_path):
                 wireframe_image = Image.open(wireframe_path).convert('RGB')
                 wireframe_image = np.array(wireframe_image)
@@ -238,6 +243,8 @@ class IF_TrellisImageTo3D:
         del mesh_output
         torch.cuda.empty_cache()
         
+        logger.info(f"Texture image shape: {texture_image.shape}")
+
         return video_path, glb_path, texture_path, wireframe_path, texture_image, wireframe_image
 
     def get_pipeline_params(self, seed, ss_sampling_steps, ss_guidance_strength,
@@ -288,7 +295,7 @@ class IF_TrellisImageTo3D:
         save_texture: bool,
         save_wireframe: bool,
         masks: Optional[torch.Tensor] = None,
-    ) -> Tuple[str, str, dict]:
+    ) -> Tuple[str, str, torch.Tensor]:
         try:
             logger.info(f"Input images tensor initial shape: {images.shape}")
             with model.inference_context():
@@ -320,7 +327,7 @@ class IF_TrellisImageTo3D:
                         **pipeline_params
                     )
 
-                video_path, glb_path, _, _, _, _ = self.generate_outputs(
+                video_path, glb_path, _, _, texture_image, _ = self.generate_outputs(
                     outputs,
                     project_name,
                     fps,
@@ -332,11 +339,23 @@ class IF_TrellisImageTo3D:
                     gaussian_path = os.path.join(self.output_dir, project_name, f"{project_name}.ply")
                     outputs['gaussian'][0].save_ply(gaussian_path)
 
+                # Convert texture image to tensor
+                if isinstance(texture_image, np.ndarray):
+                    # Ensure proper shape and type
+                    if texture_image.ndim == 2:  # Grayscale
+                        texture_image = np.stack([texture_image]*3, axis=-1)
+                    elif texture_image.shape[-1] == 4:  # RGBA
+                        texture_image = texture_image[..., :3]  # Drop alpha channel
+                    
+                    texture_tensor = torch.from_numpy(texture_image).float() / 255.0
+                    texture_tensor = texture_tensor.unsqueeze(0)  # [1, H, W, 3]
+                    logger.info(f"Texture tensor shape after unsqueeze: {texture_tensor.shape}")
+                else:
+                    # Fallback to black texture
+                    texture_tensor = torch.zeros((1, self.texture_size, self.texture_size, 3), dtype=torch.float32)
 
                 self.cleanup_outputs(outputs)
-                #if glb_path and not glb_path.startswith('output/'):
-                #    glb_path = f"output/{glb_path}"
-                return glb_path, video_path
+                return glb_path, video_path, texture_tensor
 
         except Exception as e:
             logger.error(f"Error in image_to_3d: {str(e)}")
