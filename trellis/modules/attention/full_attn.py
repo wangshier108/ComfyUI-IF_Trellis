@@ -1,18 +1,36 @@
 from typing import *
 import torch
 import math
-from . import DEBUG, BACKEND
+from trellis.backend_config import (
+    get_attention_backend,
+    get_debug_mode,
+    get_available_backends
+)
+import logging
 
-if BACKEND == 'xformers':
+logger = logging.getLogger(__name__)
+
+# Get configuration from central config
+BACKEND = get_attention_backend()
+DEBUG = get_debug_mode()
+
+# Get available backends and import if active
+available_backends = get_available_backends()
+
+if BACKEND == "xformers" and available_backends['xformers']:
     import xformers.ops as xops
-elif BACKEND == 'flash_attn':
+elif BACKEND == "flash_attn" and available_backends['flash_attn']:
     import flash_attn
-elif BACKEND == 'sdpa':
+elif BACKEND == "sage" and available_backends['sage']:
+    import torch.nn.functional as F
+    from sageattention import sageattn
+    F.scaled_dot_product_attention = sageattn
+elif BACKEND == "sdpa":
     from torch.nn.functional import scaled_dot_product_attention as sdpa
-elif BACKEND == 'naive':
-    pass
+elif BACKEND == "naive":
+    from torch.nn.functional import scaled_dot_product_attention as naive
 else:
-    raise ValueError(f"Unknown attention backend: {BACKEND}")
+    raise ValueError(f"Unknown attention module: {BACKEND}")
 
 
 __all__ = [

@@ -193,7 +193,7 @@ class IF_TrellisImageTo3D:
             video_path = os.path.join(out_dir, f"{project_name}_preview.mp4")
             imageio.mimsave(video_path, video, fps=fps)
             full_video_path = os.path.abspath(video_path)
-            video_path = get_subpath_after_dir(full_video_path, "output")
+            video_path = os.path.abspath(video_path)
             logger.info(f"Full video path: {full_video_path}, Processed video path: {video_path}")
 
         if save_glb:
@@ -308,7 +308,7 @@ class IF_TrellisImageTo3D:
 
                 pipeline_params = self.get_pipeline_params(
                     seed, ss_sampling_steps, ss_guidance_strength,
-                    slat_sampling_steps, slat_guidance_strength
+                    slat_sampling_steps, slat_guidance_strength,
                 )
 
                 # Handle single vs multi mode differently
@@ -316,7 +316,8 @@ class IF_TrellisImageTo3D:
                     # Take just the first image regardless of how many were input
                     images = images[0:1]
                     pil_imgs = self.torch_to_pil_batch(images, masks)
-                    outputs = model.run(pil_imgs[0], **pipeline_params)
+                    outputs = model.run(pil_imgs[0],
+                    **pipeline_params)
                 else:
                     # In multi mode, treat the whole list as a batch
                     pil_imgs = self.torch_to_pil_batch(images, masks)

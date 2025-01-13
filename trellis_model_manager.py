@@ -172,12 +172,17 @@ class TrellisModelManager:
         return models
 
     def load_dinov2(self, model_name: str):
-        """Load DINOv2 model with device and precision management"""
+        """Load DINOv2 model with device, precision, and attention backend management"""
         try:
-            # Get use_fp16 from config dict or object
+            # Get configuration values
             use_fp16 = (self.config.get('use_fp16', True) 
                     if isinstance(self.config, dict) 
                     else getattr(self.config, 'use_fp16', True))
+            
+            # Get attention backend from config
+            attention_backend = (self.config.get('attention_backend', 'default')
+                    if isinstance(self.config, dict)
+                    else getattr(self.config, 'attention_backend', 'default'))
 
             # Try to load from local path first
             model_path = folder_paths.get_full_path("classifiers", f"{model_name}.pth")
@@ -185,8 +190,11 @@ class TrellisModelManager:
             if model_path is None:
                 print(f"Downloading {model_name} from torch hub...")
                 try:
-                    # Load model architecture
-                    model = torch.hub.load('facebookresearch/dinov2', model_name, pretrained=True)
+                    # Load model architecture with specified attention backend
+                    model = torch.hub.load('facebookresearch/dinov2', model_name, 
+                                         pretrained=True, 
+                                         force_reload=False,
+                                         trust_repo=True)
                     
                     # Save model for future use
                     save_dir = os.path.join(folder_paths.models_dir, "classifiers")
@@ -203,13 +211,20 @@ class TrellisModelManager:
             else:
                 # Load from local path
                 print(f"Loading DINOv2 model from {model_path}")
-                model = torch.hub.load('facebookresearch/dinov2', model_name, pretrained=False)
+                model = torch.hub.load('facebookresearch/dinov2', model_name, 
+                                     pretrained=False,
+                                     force_reload=False,
+                                     trust_repo=True)
                 model.load_state_dict(torch.load(model_path))
 
             # Move model to specified device and apply precision settings
             model = model.to(self.device)
             if use_fp16:
                 model = model.half()
+            
+            # Set attention backend if specified in config
+            if hasattr(model, 'set_attention_backend') and attention_backend != 'default':
+                model.set_attention_backend(attention_backend)
             
             model.eval()
             return model

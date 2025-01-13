@@ -1,16 +1,43 @@
 from typing import *
-import torch
+from enum import Enum
 import math
+import os
+import logging
+import torch
 from .. import SparseTensor
-from .. import DEBUG, ATTN
+from trellis.backend_config import (
+    get_attention_backend,
+    get_debug_mode,
+    get_available_backends
+)
+import logging
 
-if ATTN == 'xformers':
+logger = logging.getLogger(__name__)
+
+# Get configuration from central config
+ATTN = get_attention_backend()
+DEBUG = get_debug_mode()
+
+# Get available backends and import if active
+available_backends = get_available_backends()
+
+if ATTN == "xformers" and available_backends['xformers']:
     import xformers.ops as xops
-elif ATTN == 'flash_attn':
+elif ATTN == "flash_attn" and available_backends['flash_attn']:
     import flash_attn
+elif ATTN == "sage" and available_backends['sage']:
+    import torch.nn.functional as F
+    from sageattention import sageattn
+    F.scaled_dot_product_attention = sageattn
+elif ATTN == "sdpa":
+    from torch.nn.functional import scaled_dot_product_attention as sdpa
+elif ATTN == "naive":
+    from torch.nn.functional import scaled_dot_product_attention as naive
 else:
     raise ValueError(f"Unknown attention module: {ATTN}")
 
+# Log the active backend
+logger.info(f"Using attention backend: {ATTN}")
 
 __all__ = [
     'sparse_windowed_scaled_dot_product_self_attention',
