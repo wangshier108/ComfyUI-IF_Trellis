@@ -7,7 +7,7 @@ import importlib
 # Global variables
 BACKEND = 'spconv'  # Default sparse backend
 DEBUG = False       # Debug mode flag
-ATTN = 'sdpa' # Default attention backend
+ATTN = 'flash_attn' # Default attention backend
 SPCONV_ALGO = 'implicit_gemm'  # Default algorithm
 
 def get_spconv_algo() -> str:
