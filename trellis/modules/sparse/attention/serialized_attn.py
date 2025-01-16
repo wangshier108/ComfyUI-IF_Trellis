@@ -19,23 +19,17 @@ DEBUG = get_debug_mode()
 # Get available backends and import if active
 available_backends = get_available_backends()
 
-if ATTN == "xformers" and available_backends['xformers']:
-    import xformers.ops as xops
-elif ATTN == "flash_attn" and available_backends['flash_attn']:
-    import flash_attn
-elif ATTN == "sage" and available_backends['sage']:
-    import torch.nn.functional as F
-    from sageattention import sageattn
-    F.scaled_dot_product_attention = sageattn
-elif ATTN == "sdpa":
-    from torch.nn.functional import scaled_dot_product_attention as sdpa
-elif ATTN == "naive":
-    from torch.nn.functional import scaled_dot_product_attention as naive
-else:
-    raise ValueError(f"Unknown attention module: {ATTN}")
+if ATTN not in ['xformers', 'flash_attn']:
+    logger.warning(f"Attention backend {ATTN} not supported for sparse attention. Only 'xformers' and 'flash_attn' are available. Defaulting to 'flash_attn'")
+    ATTN = 'flash_attn'
 
-# Log the active backend
-logger.info(f"Using attention backend: {ATTN}")
+if ATTN == 'xformers' and available_backends['xformers']:
+    import xformers.ops as xops
+elif ATTN == 'flash_attn' and available_backends['flash_attn']:
+    import flash_attn
+else:
+    raise ImportError(f"Could not import {ATTN}. Please install either xformers or flash-attn for sparse attention support.")
+
 
 __all__ = [
     'sparse_serialized_scaled_dot_product_self_attention',
