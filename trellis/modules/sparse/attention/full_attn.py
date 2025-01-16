@@ -26,13 +26,18 @@ elif ATTN == "flash_attn" and available_backends['flash_attn']:
 elif ATTN == "sage" and available_backends['sage']:
     import torch.nn.functional as F
     from sageattention import sageattn
+    # Store the original SDPA function
+    original_sdpa = getattr(F, 'scaled_dot_product_attention', None)
     F.scaled_dot_product_attention = sageattn
 elif ATTN == "sdpa":
     from torch.nn.functional import scaled_dot_product_attention as sdpa
 elif ATTN == "naive":
     from torch.nn.functional import scaled_dot_product_attention as naive
 else:
-    raise ValueError(f"Unknown attention module: {ATTN}")
+    # Fallback to SDPA if unknown backend
+    logger.warning(f"Unknown attention module: {ATTN}, falling back to SDPA")
+    ATTN = "sdpa"
+    from torch.nn.functional import scaled_dot_product_attention as sdpa
 
 # Log the active backend
 logger.info(f"Using attention backend: {ATTN}")
@@ -232,6 +237,32 @@ def sparse_scaled_dot_product_attention(*args, **kwargs):
             out = flash_attn.flash_attn_varlen_kvpacked_func(q, kv, cu_seqlens_q, cu_seqlens_kv, max(q_seqlen), max(kv_seqlen))
         elif num_all_args == 3:
             out = flash_attn.flash_attn_varlen_func(q, k, v, cu_seqlens_q, cu_seqlens_kv, max(q_seqlen), max(kv_seqlen))
+    elif ATTN in ['sage', 'sdpa', 'naive']:
+        # Handle both sage and sdpa cases
+        if num_all_args == 1:
+            q, k, v = qkv.unbind(dim=1)
+        elif num_all_args == 2:
+            k, v = kv.unbind(dim=1)
+        
+        # Reshape for attention
+        q = q.unsqueeze(0)  # [1, T_Q, H, C]
+        k = k.unsqueeze(0)  # [1, T_KV, H, C]
+        v = v.unsqueeze(0)  # [1, T_KV, H, C]
+        
+        # Create attention mask
+        mask = torch.zeros((1, q.size(1), k.size(1)), dtype=torch.bool, device=device)
+        start_q = 0
+        start_kv = 0
+        for i, (q_len, kv_len) in enumerate(zip(q_seqlen, kv_seqlen)):
+            mask[0, start_q:start_q + q_len, start_kv:start_kv + kv_len] = True
+            start_q += q_len
+            start_kv += kv_len
+        
+        # Apply attention
+        if ATTN == 'sage':
+            out = F.scaled_dot_product_attention(q, k, v, attn_mask=~mask)[0]
+        else:
+            out = sdpa(q, k, v, attn_mask=~mask)[0]
     else:
         raise ValueError(f"Unknown attention module: {ATTN}")
     
