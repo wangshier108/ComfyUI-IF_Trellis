@@ -40,7 +40,7 @@ class IF_TrellisCheckpointLoader:
         # e.g. create a list of names that are True:
         available_attn = [k for k, v in attn_backends.items() if v]
         if not available_attn:
-            available_attn = ['sdpa']  # fallback
+            available_attn = ['flash_attn']  # fallback
 
         available_sparse = [k for k, v in sparse_backends.items() if v]
         if not available_sparse:
@@ -57,7 +57,7 @@ class IF_TrellisCheckpointLoader:
                 # The user picks from the actually installed backends
                 #
                 "attn_backend": (available_attn,
-                                 {"default": "sdpa" if "sdpa" in available_attn else available_attn[0],
+                                 {"default": "flash_attn" if "flash_attn" in available_attn else available_attn[0],
                                   "tooltip": "Select attention backend."}),
                 "sparse_backend": (available_sparse,
                                    {"default": "spconv" if "spconv" in available_sparse else available_sparse[0],
