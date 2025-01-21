@@ -3,7 +3,6 @@ import os
 import logging
 import torch
 import huggingface_hub
-import requests
 import folder_paths
 from trellis_model_manager import TrellisModelManager
 from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
