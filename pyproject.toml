@@ -43,6 +43,9 @@ dependencies = [
     'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp311-cp311-win_amd64.whl; sys_platform == "win64" and python_version=="3.11"',
     'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp312-cp310-win_amd64.whl; sys_platform == "win64" and python_version=="3.10"',
     'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp312-cp39-win_amd64.whl; sys_platform == "win64" and python_version=="3.9"',
+
+    # `diff_gaussian_rasterization` from source code
+    "git+https://github.com/graphdeco-inria/diff-gaussian-rasterization.git",
 ]
 
 [project.urls]
