@@ -26,8 +26,8 @@ dependencies = [
     "spconv-cu124",
     "diffrp-nvdiffrast",
 
-    # triton
-    'triton; sys_platform != "win64"',
+    # triton for linux
+    'triton; sys_platform == "linux"',
     # triton for windows
     'https://github.com/woct0rdho/triton-windows/releases/download/v3.1.0-windows.post8/triton-3.1.0-cp312-cp312-win_amd64.whl; sys_platform == "win64" and python_version=="3.12"',
     'https://github.com/woct0rdho/triton-windows/releases/download/v3.1.0-windows.post8/triton-3.1.0-cp311-cp311-win_amd64.whl; sys_platform == "win64" and python_version=="3.11"',
