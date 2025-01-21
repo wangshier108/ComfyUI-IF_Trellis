@@ -2,13 +2,15 @@
 import os
 import logging
 import torch
+import huggingface_hub
+import requests
 import folder_paths
 from trellis_model_manager import TrellisModelManager
 from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
 from trellis.backend_config import (
     set_attention_backend,
     set_sparse_backend,
-    get_available_backends,     
+    get_available_backends,
     get_available_sparse_backends
 )
 from typing import Literal
@@ -140,12 +142,18 @@ class IF_TrellisCheckpointLoader:
             # 1) Setup environment + backends
             self._setup_environment(attn_backend, sparse_backend, spconv_algo, smooth_k)
 
-            # 2) Get model path
-            model_path = folder_paths.get_full_path("checkpoints", model_name)
-            if model_path is None:
-                model_path = os.path.join(folder_paths.models_dir, "checkpoints", model_name)
-                if not os.path.exists(model_path):
-                    raise FileNotFoundError(f"Model not found: {model_path}")
+            # 2) Get model paths, download if needed
+            model_path = os.path.join(folder_paths.models_dir, "checkpoints", model_name)
+            if not os.path.exists(model_path) or not os.listdir(model_path):
+                repo_id = "JeffreyXiang"
+                try:
+                    huggingface_hub.snapshot_download(
+                        f"{repo_id}/{model_name}",
+                        repo_type="model",
+                        local_dir=model_path
+                    )
+                except Exception as e:
+                    raise RuntimeError(f"Failed to download {repo_id}/{model_name} to: {model_path}, {e}")
 
             # 3) Create pipeline with the config
             pipeline = TrellisImageTo3DPipeline.from_pretrained(
