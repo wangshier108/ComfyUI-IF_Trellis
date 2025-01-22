@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-if_trellis"
 description = "ComfyUI IF Trellis creates a 3d mesh from a single view or multi angle pictures"
-version = "0.2.1"
+version = "0.2.2"
 license = { file = "LICENSE.txt" } 
 dependencies = [
     "pillow",
