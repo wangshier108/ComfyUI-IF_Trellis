@@ -21,6 +21,7 @@ from trellis_model_manager import TrellisModelManager
 import os
 import logging
 
+logger = logging.getLogger("IF_Trellis")
 
 class TrellisImageTo3DPipeline(Pipeline):
     """
