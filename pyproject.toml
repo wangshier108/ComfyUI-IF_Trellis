@@ -3,7 +3,51 @@ name = "comfyui-if_trellis"
 description = "ComfyUI IF Trellis creates a 3d mesh from a single view or multi angle pictures"
 version = "0.2.1"
 license = { file = "LICENSE.txt" } 
-dependencies = ["pillow", "imageio", "imageio-ffmpeg", "tqdm", "easydict","opencv-python-headless","scipy","ninja","plyfile","rembg","onnxruntime-gpu","trimesh","xatlas","pyvista","pymeshfix","igraph","sageattention","git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8","xformers","spconv-cu120"]
+dependencies = [
+    "pillow",
+    "imageio",
+    "imageio-ffmpeg",
+    "tqdm",
+    "easydict",
+    "opencv-python-headless",
+    "scipy",
+    "ninja",
+    "plyfile",
+    "rembg",
+    "onnxruntime-gpu",
+    "trimesh",
+    "xatlas",
+    "pyvista",
+    "pymeshfix",
+    "igraph",
+    "sageattention",
+    "git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8",
+    "xformers",
+    "spconv-cu124",
+    "diffrp-nvdiffrast",
+
+    # triton for linux
+    'triton; sys_platform == "linux"',
+    # triton for windows
+    'https://github.com/woct0rdho/triton-windows/releases/download/v3.1.0-windows.post8/triton-3.1.0-cp312-cp312-win_amd64.whl; sys_platform == "win64" and python_version=="3.12"',
+    'https://github.com/woct0rdho/triton-windows/releases/download/v3.1.0-windows.post8/triton-3.1.0-cp311-cp311-win_amd64.whl; sys_platform == "win64" and python_version=="3.11"',
+    'https://github.com/woct0rdho/triton-windows/releases/download/v3.1.0-windows.post8/triton-3.1.0-cp310-cp310-win_amd64.whl; sys_platform == "win64" and python_version=="3.10"',
+    'https://github.com/woct0rdho/triton-windows/releases/download/v3.1.0-windows.post8/triton-3.1.0-cp38-cp38-win_amd64.whl; sys_platform == "win64" and python_version=="3.8"',
+
+    # koalin for linux
+    'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp312-cp312-linux_x86_64.whl; sys_platform == "linux" and python_version=="3.12"',
+    'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp311-cp311-linux_x86_64.whl; sys_platform == "linux" and python_version=="3.11"',
+    'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp310-cp310-linux_x86_64.whl; sys_platform == "linux" and python_version=="3.10"',
+    'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp39-cp39-linux_x86_64.whl; sys_platform == "linux" and python_version=="3.9"',
+    # koalin for windows
+    'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp312-cp312-win_amd64.whl; sys_platform == "win64" and python_version=="3.12"',
+    'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp311-cp311-win_amd64.whl; sys_platform == "win64" and python_version=="3.11"',
+    'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp312-cp310-win_amd64.whl; sys_platform == "win64" and python_version=="3.10"',
+    'https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124/kaolin-0.17.0-cp312-cp39-win_amd64.whl; sys_platform == "win64" and python_version=="3.9"',
+
+    # `diff_gaussian_rasterization` from source code
+    "git+https://github.com/graphdeco-inria/diff-gaussian-rasterization.git",
+]
 
 [project.urls]
 Repository = "https://github.com/if-ai/ComfyUI-IF_Trellis.git"
