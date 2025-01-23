@@ -110,7 +110,7 @@ pip install C:\tmp\extensions\nvdiffrast
 - [x] 3D Viewport 
 - [x] OPT mode
 - [x] Multiviews
-- [x] Sage attn
+- [ ] Sage attn
 - [ ] Installation
 - [ ] colab notebook
 - [ ] MarchingCubes mode

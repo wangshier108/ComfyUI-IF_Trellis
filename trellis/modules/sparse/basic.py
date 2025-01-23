@@ -1,10 +1,17 @@
 from typing import *
 import torch
 import torch.nn as nn
-from . import BACKEND, DEBUG
+
+from trellis.backend_config import get_debug_mode, get_spconv_algo, get_sparse_backend
+
+
 SparseTensorData = None # Lazy import
 
+DEBUG = get_debug_mode()
 
+SPCONV_ALGO = get_spconv_algo()
+
+BACKEND = get_sparse_backend()
 __all__ = [
     'SparseTensor',
     'sparse_batch_broadcast',

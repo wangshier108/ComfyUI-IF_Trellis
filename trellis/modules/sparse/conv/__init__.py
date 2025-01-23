@@ -1,7 +1,9 @@
-from .. import BACKEND
+import os
+import logging
+from trellis.backend_config import get_sparse_backend, get_spconv_algo
 
-
-SPCONV_ALGO = 'auto'    # 'auto', 'implicit_gemm', 'native'
+BACKEND = get_sparse_backend()
+SPCONV_ALGO = get_spconv_algo()
 
 def __from_env():
     import os
@@ -19,4 +21,9 @@ if BACKEND == 'torchsparse':
     from .conv_torchsparse import *
 elif BACKEND == 'spconv':
     from .conv_spconv import *
+    
+__all__ = [
+    "SparseConv3d",
+    "SparseInverseConv3d",
+]
 

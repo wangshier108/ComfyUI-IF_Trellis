@@ -29,6 +29,15 @@ def _get_plugin(gl=False):
     if _cached_plugin.get(gl, None) is not None:
         return _cached_plugin[gl]
 
+    # Get CUDA compute capability of current device
+    if torch.cuda.is_available():
+        major, minor = torch.cuda.get_device_capability()
+        compute_capability = f"sm_{major}{minor}"
+        os.environ['TORCH_CUDA_ARCH_LIST'] = compute_capability
+    else:
+        # Clear the architecture list if CUDA is not available
+        os.environ['TORCH_CUDA_ARCH_LIST'] = ''
+
     # Make sure we can find the necessary compiler and libary binaries.
     if os.name == 'nt':
         lib_dir = os.path.dirname(__file__) + r"\..\lib"

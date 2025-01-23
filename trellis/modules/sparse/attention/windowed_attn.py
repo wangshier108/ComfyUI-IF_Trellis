@@ -1,15 +1,37 @@
 from typing import *
-import torch
+from enum import Enum
 import math
+import os
+import logging
+import torch
 from .. import SparseTensor
-from .. import DEBUG, ATTN
+from trellis.backend_config import (
+    get_attention_backend,
+    get_debug_mode,
+    get_available_backends
+)
+import logging
 
-if ATTN == 'xformers':
+logger = logging.getLogger(__name__)
+
+# Get configuration from central config
+# Get configuration from central config
+ATTN = get_attention_backend()
+DEBUG = get_debug_mode()
+
+# Get available backends and import if active
+available_backends = get_available_backends()
+
+if ATTN not in ['xformers', 'flash_attn']:
+    logger.warning(f"Attention backend {ATTN} not supported for sparse attention. Only 'xformers' and 'flash_attn' are available. Defaulting to 'flash_attn'")
+    ATTN = 'flash_attn'
+
+if ATTN == 'xformers' and available_backends['xformers']:
     import xformers.ops as xops
-elif ATTN == 'flash_attn':
+elif ATTN == 'flash_attn' and available_backends['flash_attn']:
     import flash_attn
 else:
-    raise ValueError(f"Unknown attention module: {ATTN}")
+    raise ImportError(f"Could not import {ATTN}. Please install either xformers or flash-attn for sparse attention support.")
 
 
 __all__ = [

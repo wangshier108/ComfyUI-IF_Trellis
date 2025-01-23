@@ -190,6 +190,80 @@ class IF_TrellisImageTo3D:
         )
         return gaussian, mesh
 
+    def generate_outputs(self, outputs, project_name, fps=15, render_video=True, save_glb=True):
+        out_dir = os.path.join(self.output_dir, project_name)
+        os.makedirs(out_dir, exist_ok=True)
+
+        video_path = glb_path = ""
+        texture_path = wireframe_path = ""
+        texture_image = wireframe_image = None
+
+        # Extract the first (and usually only) result
+        gaussian_output = outputs['gaussian'][0]
+        mesh_output = outputs['mesh'][0]
+
+        if render_video:
+            video_gs = render_utils.render_video(gaussian_output)['color']
+            video_mesh = render_utils.render_video(mesh_output)['normal']
+            video = [np.concatenate([frame_gs, frame_mesh], axis=1)
+                     for frame_gs, frame_mesh in zip(video_gs, video_mesh)]
+            video_path = os.path.join(out_dir, f"{project_name}_preview.mp4")
+            imageio.mimsave(video_path, video, fps=fps)
+            full_video_path = os.path.abspath(video_path)
+            video_path = os.path.abspath(video_path)
+            logger.info(f"Full video path: {full_video_path}, Processed video path: {video_path}")
+
+        if save_glb:
+            texture_path = os.path.join(out_dir, f"{project_name}_texture.png") if self.save_texture else None
+            wireframe_path = os.path.join(out_dir, f"{project_name}_wireframe.png") if self.save_wireframe else None
+            glb_path = os.path.join(out_dir, f"{project_name}.glb")
+
+            glb = postprocessing_utils.to_glb(
+                gaussian_output,
+                mesh_output,
+                simplify=self.mesh_simplify,
+                texture_size=self.texture_size,
+                texture_mode=self.texture_mode,
+                fill_holes=True,
+                save_texture=self.save_texture and self.texture_mode != 'blank',
+                texture_path=texture_path,
+                save_wireframe=self.save_wireframe and self.texture_mode != 'blank',
+                wireframe_path=wireframe_path,
+                verbose=True
+            )
+            glb.export(glb_path)
+            glb_path = get_subpath_after_dir(glb_path, "output")
+            full_glb_path = os.path.abspath(glb_path)
+            logger.info(f"Full GLB path: {full_glb_path}, Processed GLB path: {glb_path}")
+
+            # Handle texture image creation
+            if self.save_texture and self.texture_mode != 'blank' and texture_path and os.path.exists(texture_path):
+                try:
+                    texture_image = Image.open(texture_path).convert('RGB')
+                    texture_image = np.array(texture_image)
+                except Exception as e:
+                    logger.warning(f"Failed to load texture image: {str(e)}")
+                    texture_image = np.zeros((self.texture_size, self.texture_size, 3), dtype=np.uint8)
+            else:
+                # Create a blank texture if not saving or if texture mode is blank
+                texture_image = np.zeros((self.texture_size, self.texture_size, 3), dtype=np.uint8)
+
+            # Handle wireframe image
+            if wireframe_path and os.path.exists(wireframe_path):
+                wireframe_image = Image.open(wireframe_path).convert('RGB')
+                wireframe_image = np.array(wireframe_image)
+            else:
+                wireframe_image = None
+
+        # Clean up the large tensors after we're done using them
+        del gaussian_output
+        del mesh_output
+        torch.cuda.empty_cache()
+        
+        logger.info(f"Texture image shape: {texture_image.shape}")
+
+        return video_path, glb_path, texture_path, wireframe_path, texture_image, wireframe_image
+
     def get_pipeline_params(self, seed, ss_sampling_steps, ss_guidance_strength,
                             slat_sampling_steps, slat_guidance_strength):
         if ss_sampling_steps < 1:
@@ -252,7 +326,7 @@ class IF_TrellisImageTo3D:
 
                 pipeline_params = self.get_pipeline_params(
                     seed, ss_sampling_steps, ss_guidance_strength,
-                    slat_sampling_steps, slat_guidance_strength
+                    slat_sampling_steps, slat_guidance_strength,
                 )
 
                 # Handle single vs multi mode differently
@@ -262,10 +336,8 @@ class IF_TrellisImageTo3D:
                     images = images[0:1]
                     pil_imgs = self.torch_to_pil_batch(images, masks)
                     outputs = model.run(pil_imgs[0], **pipeline_params)
-                    # torch.cuda.nvtx.range_pop()
                 else:
                     # In multi mode, treat the whole list as a batch
-                    # torch.cuda.nvtx.range_push('multi_run')
                     pil_imgs = self.torch_to_pil_batch(images, masks)
                     logger.info(f"Processing {len(pil_imgs)} views for multi-view reconstruction")
                     outputs = model.run_multi_image(
@@ -273,9 +345,6 @@ class IF_TrellisImageTo3D:
                         mode=multimode,
                         **pipeline_params
                     )
-                
-                print("why bedfor output.type: ", type(outputs))
-                print("why outputs: ", outputs)
                 return outputs['gaussian'], outputs['mesh']
 
         except Exception as e:
@@ -283,8 +352,6 @@ class IF_TrellisImageTo3D:
             logger.error(traceback.format_exc())
             raise
         finally:
-            # torch.cuda.empty_cache()
-            # gc.collect()
             pass
 
     def cleanup_outputs(self, outputs):

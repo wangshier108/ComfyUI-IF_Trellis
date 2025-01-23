@@ -1,49 +1,14 @@
 from typing import *
-
-BACKEND = 'spconv' 
-DEBUG = False
-ATTN = 'flash_attn'
-
-def __from_env():
-    import os
-    
-    global BACKEND
-    global DEBUG
-    global ATTN
-    
-    env_sparse_backend = os.environ.get('SPARSE_BACKEND')
-    env_sparse_debug = os.environ.get('SPARSE_DEBUG')
-    env_sparse_attn = os.environ.get('SPARSE_ATTN_BACKEND')
-    if env_sparse_attn is None:
-        env_sparse_attn = os.environ.get('ATTN_BACKEND')
-
-    if env_sparse_backend is not None and env_sparse_backend in ['spconv', 'torchsparse']:
-        BACKEND = env_sparse_backend
-    if env_sparse_debug is not None:
-        DEBUG = env_sparse_debug == '1'
-    if env_sparse_attn is not None and env_sparse_attn in ['xformers', 'flash_attn']:
-        ATTN = env_sparse_attn
-        
-    print(f"[SPARSE] Backend: {BACKEND}, Attention: {ATTN}")
-        
-
-__from_env()
-    
-
-def set_backend(backend: Literal['spconv', 'torchsparse']):
-    global BACKEND
-    BACKEND = backend
-
-def set_debug(debug: bool):
-    global DEBUG
-    DEBUG = debug
-
-def set_attn(attn: Literal['xformers', 'flash_attn']):
-    global ATTN
-    ATTN = attn
-    
-    
 import importlib
+from trellis.backend_config import get_sparse_backend, get_attention_backend, get_debug_mode
+
+BACKEND = get_sparse_backend()
+DEBUG = get_debug_mode()
+ATTN = get_attention_backend()
+
+if ATTN not in ['xformers', 'flash_attn']:
+    logger.warning(f"Attention backend {ATTN} not supported for sparse attention. Only 'xformers' and 'flash_attn' are available. Defaulting to 'flash_attn'")
+    ATTN = 'flash_attn'
 
 __attributes = {
     'SparseTensor': 'basic',
