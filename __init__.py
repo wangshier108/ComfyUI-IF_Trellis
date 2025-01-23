@@ -1,7 +1,6 @@
 #__init__.py
 import os
 import sys
-import torch
 import logging
 import platform
 import folder_paths
@@ -45,15 +44,21 @@ except Exception as e:
 
 try:
     from IF_TrellisCheckpointLoader import IF_TrellisCheckpointLoader
-    from IF_Trellis import IF_TrellisImageTo3D
+    from IF_Trellis import IF_TrellisImageTo3D, Trans3D2GlbFile, Trans3D2Gaussian, Trans3D2Video
     NODE_CLASS_MAPPINGS = {
         "IF_TrellisCheckpointLoader": IF_TrellisCheckpointLoader,
         "IF_TrellisImageTo3D": IF_TrellisImageTo3D,
+        "Trans3D2GlbFile": Trans3D2GlbFile,
+        "Trans3D2Gaussian": Trans3D2Gaussian,
+        "Trans3D2Video": Trans3D2Video,
     }
 
     NODE_DISPLAY_NAME_MAPPINGS = {
         "IF_TrellisCheckpointLoader": "Trellis Model Loader 💾",
         "IF_TrellisImageTo3D": "Trellis Image to 3D 🖼️➡️🎲",
+        "Trans3D2GlbFile": "Trans3D2GlbFile",
+        "Trans3D2Gaussian": "Trans3D2Gaussian",
+        "Trans3D2Video": "Trans3D2Video",
     }
 
 except Exception as e:
