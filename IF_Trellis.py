@@ -2,6 +2,7 @@
 import os
 import torch
 import imageio
+import hashlib
 import numpy as np
 import logging
 import traceback
@@ -40,16 +41,56 @@ def get_subpath_after_dir(full_path: str, target_dir: str) -> str:
         print(f"Error processing path in get_subpath_after_dir: {str(e)}")
         return os.path.basename(full_path)
 
-#测试上传带绝对路径的文件
-def test_upload_file_with_abs_filename(abs_filename):
-    # abs_filename = "/home/wanghanying/collect_env.py"  # 替换为文件的绝对路径
+def get_sha256_filename(file_path):
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+def upload_with_retries(file_path, max_retries=3):
+    upload_data = None
+    with open(file_path, "rb") as file:
+        upload_data = file.read()
+    
+    filename = get_sha256_filename(file_path)
+    
+    attempt = 0
+    while attempt < max_retries:
+        try:
+            url = client.upload_byte(file_name=filename, image_stream=upload_data)
+            if url:
+                return url
+            else:
+                logger.error(f"Failed to upload {file_path}. Retrying... ({attempt + 1}/{max_retries})")
+        except Exception as e:
+            logger.error(f"Error uploading file {file_path}: {e}")
+        
+        attempt += 1
+    
+    # logger.error(f"Failed to upload {file_path} after {max_retries} attempts.")
+    return None
+
+
+def upload_to_oss(abs_filename):
     if not os.path.exists(abs_filename):
         print(f"File {abs_filename} does not exist.")
         return
-    url = client.upload_file_with_abs_filename(abs_filename=abs_filename)
-    assert url is not None, "Failed to upload file with absolute filename to OSS"
-    print(f"File with absolute path uploaded successfully! Access it here: {url}")
+    
+    url = upload_with_retries(abs_filename)
+    
+    if url is not None:
+        print(f"File with absolute path uploaded successfully! Access it here: {url}")
+        try:
+            os.remove(abs_filename)
+            print(f"Successfully deleted file {abs_filename}")
+        except Exception as e:
+            logger.error(f"Failed to delete file {abs_filename}: {e}")
+    else:
+        print(f"Failed to upload file {abs_filename} after retries.")
+
     return url
+
 
 
 class IF_TrellisImageTo3D:
@@ -291,7 +332,7 @@ class Trans3D2Video:
             imageio.mimsave(video_path, video, fps=fps)
             full_video_path = os.path.abspath(video_path)
             logger.info(f"Full video path: {full_video_path}, Processed video path: {video_path}")
-            url = test_upload_file_with_abs_filename(full_video_path)  
+            url = upload_to_oss(full_video_path)  
 
         return (url,)
 
@@ -406,7 +447,7 @@ class Trans3D2GlbFile:
             # Fallback to black texture
             texture_tensor = torch.zeros((1, texture_size, texture_size, 3), dtype=torch.float32)
 
-        url = test_upload_file_with_abs_filename(full_glb_path)
+        url = upload_to_oss(full_glb_path)
         return (url, texture_tensor)
 
 class Trans3D2Gaussian:
@@ -434,7 +475,7 @@ class Trans3D2Gaussian:
             gaussian_path = os.path.join(folder_paths.get_output_directory(), project_name, f"{project_name}.ply")
             trellis_gaussian[0].save_ply(gaussian_path)
         
-        url = test_upload_file_with_abs_filename(gaussian_path)
+        url = upload_to_oss(gaussian_path)
         return (url, )
 
 
