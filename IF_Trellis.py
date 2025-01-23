@@ -5,7 +5,6 @@ import imageio
 import numpy as np
 import logging
 import traceback
-import requests
 from PIL import Image
 import folder_paths
 from typing import List, Union, Tuple, Literal, Optional, Dict
@@ -66,18 +65,8 @@ class IF_TrellisImageTo3D:
                 "ss_sampling_steps": ("INT", {"default": 12, "min": 1, "max": 100}),
                 "slat_guidance_strength": ("FLOAT", {"default": 3.0, "min": 0.0, "max": 12.0, "step": 0.1}),
                 "slat_sampling_steps": ("INT", {"default": 12, "min": 1, "max": 100}),
-                # "mesh_simplify": ("FLOAT", {"default": 0.95, "min": 0.9, "max": 1.0, "step": 0.01, "tooltip": "Simplify the mesh. the lower the value more polygons the mesh will have"}),
-                # "texture_size": ("INT", {"default": 1024, "min": 512, "max": 2048, "step": 512, "tooltip": "Texture size. the higher the value the more detailed the texture will be"}),
-                # "texture_mode": (["blank", "fast", "opt"], {"default": "fast", "tooltip": "Texture mode. blank is no texture. fast is a fast texture. opt is a high quality texture"}),
-                # "fps": ("INT", {"default": 15, "min": 1, "max": 60, "tooltip": "FPS. the higher the value the smoother the video will be"}),
                 "multimode": (["stochastic", "multidiffusion"], {"default": "stochastic"}),
-                # "project_name": ("STRING", {"default": "trellis_output"}),
-                # "save_glb": ("BOOLEAN", {"default": True, "tooltip": "Save the GLB file this is the 3D model"}),
-                # "render_video": ("BOOLEAN", {"default": False, "tooltip": "Render a video"}),
-                # "save_gaussian": ("BOOLEAN", {"default": False, "tooltip": "Save the Gaussian file this is a ply file of the 3D model"}),
-                # "save_texture": ("BOOLEAN", {"default": False, "tooltip": "Save the texture file"}),
-                # "save_wireframe": ("BOOLEAN", {"default": False, "tooltip": "Save the wireframe file"}),
-            },
+                },
             "optional": {
                 "masks": ("MASK", {"list": True}),
             }
@@ -226,28 +215,12 @@ class IF_TrellisImageTo3D:
         ss_sampling_steps: int,
         slat_guidance_strength: float,
         slat_sampling_steps: int,
-        # mesh_simplify: float,
-        # texture_size: int,
-        # texture_mode: str,
-        # fps: int,
         multimode: str,
-        # project_name: str,
-        # render_video: bool,
-        # save_glb: bool,
-        # save_gaussian: bool,
-        # save_texture: bool,
-        # save_wireframe: bool,
         masks: Optional[torch.Tensor] = None,
     ) -> Tuple[str, str, torch.Tensor]:
         try:
             logger.info(f"Input images tensor initial shape: {images.shape}")
-            # torch.cuda.nvtx.range_push('image_to_3d')
             with model.inference_context():
-                # self.mesh_simplify = mesh_simplify
-                # self.texture_size = texture_size
-                # self.texture_mode = texture_mode
-                # self.save_texture = save_texture
-                # self.save_wireframe = save_wireframe
                 self.device = model.device
 
                 pipeline_params = self.get_pipeline_params(
@@ -257,15 +230,12 @@ class IF_TrellisImageTo3D:
 
                 # Handle single vs multi mode differently
                 if mode == "single":
-                    # torch.cuda.nvtx.range_push('single_run')
                     # Take just the first image regardless of how many were input
                     images = images[0:1]
                     pil_imgs = self.torch_to_pil_batch(images, masks)
                     outputs = model.run(pil_imgs[0], **pipeline_params)
-                    # torch.cuda.nvtx.range_pop()
                 else:
                     # In multi mode, treat the whole list as a batch
-                    # torch.cuda.nvtx.range_push('multi_run')
                     pil_imgs = self.torch_to_pil_batch(images, masks)
                     logger.info(f"Processing {len(pil_imgs)} views for multi-view reconstruction")
                     outputs = model.run_multi_image(
@@ -273,9 +243,6 @@ class IF_TrellisImageTo3D:
                         mode=multimode,
                         **pipeline_params
                     )
-                
-                print("why bedfor output.type: ", type(outputs))
-                print("why outputs: ", outputs)
                 return outputs['gaussian'], outputs['mesh']
 
         except Exception as e:
@@ -283,8 +250,6 @@ class IF_TrellisImageTo3D:
             logger.error(traceback.format_exc())
             raise
         finally:
-            # torch.cuda.empty_cache()
-            # gc.collect()
             pass
 
     def cleanup_outputs(self, outputs):
