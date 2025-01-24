@@ -410,20 +410,27 @@ def create_wireframe_texture(
     """
     Create a wireframe texture showing UV layout.
     """
+    print("create_wireframe_texture")
     texture = np.full((texture_size, texture_size, 3), background_color, dtype=np.uint8)
-    scaled_uvs = uvs * (texture_size - 1)
+    scaled_uvs = (uvs * (texture_size - 1)).astype(int)
+    print("faces.shape:", faces.shape)
+    img = Image.fromarray(texture)
+    draw = ImageDraw.Draw(img)
     for face in faces:
-        for i in range(3):
-            start = scaled_uvs[face[i]].astype(int)
-            end = scaled_uvs[face[(i + 1) % 3]].astype(int)
-            img = Image.fromarray(texture)
-            draw = ImageDraw.Draw(img)
-            draw.line(
-                [(start[0], start[1]), (end[0], end[1])],
-                fill=line_color,
-                width=line_width
-            )
-            texture = np.array(img)
+        start1 = scaled_uvs[face[0]]
+        end1 = scaled_uvs[face[1]]
+        
+        start2 = scaled_uvs[face[1]]
+        end2 = scaled_uvs[face[2]]
+        
+        start3 = scaled_uvs[face[2]]
+        end3 = scaled_uvs[face[0]]
+
+        draw.line([(start1[0], start1[1]), (end1[0], end1[1])], fill=line_color, width=line_width)
+        draw.line([(start2[0], start2[1]), (end2[0], end2[1])], fill=line_color, width=line_width)
+        draw.line([(start3[0], start3[1]), (end3[0], end3[1])], fill=line_color, width=line_width)
+
+    texture = np.array(img)
     return texture
 
 
@@ -483,6 +490,7 @@ def to_glb(
             lambda_tv=0.01,
             verbose=verbose
         )
+        print("after bake_texture")
 
         if texture_np is None:
             texture_np = np.ones((texture_size, texture_size, 3), dtype=np.uint8) * 255

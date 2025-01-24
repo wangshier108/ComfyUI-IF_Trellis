@@ -4,8 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from tqdm import tqdm
-from easydict import EasyDict as edict
 from torchvision import transforms
 from PIL import Image
 import rembg
@@ -13,14 +11,12 @@ import gc
 from .base import Pipeline
 from . import samplers
 from ..modules import sparse as sp
-from ..representations import Gaussian, Strivec, MeshExtractResult
 from contextlib import contextmanager
 from typing import Literal
-import folder_paths
 from trellis_model_manager import TrellisModelManager
 import os
 import logging
-
+logger = logging.getLogger("trellis_image_to_3d")
 
 class TrellisImageTo3DPipeline(Pipeline):
     """

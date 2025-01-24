@@ -173,6 +173,7 @@ class IF_TrellisCheckpointLoader:
         # Set attention backend
         os.environ['ATTN_BACKEND'] = TRELLIS_CONFIG.attention_backend
         set_attention_backend(TRELLIS_CONFIG.attention_backend)
+        #这两个是不是重复了
 
         # Set smooth k for sage attention
         os.environ['SAGEATTN_SMOOTH_K'] = '1' if TRELLIS_CONFIG.smooth_k else '0'
@@ -213,6 +214,7 @@ class IF_TrellisCheckpointLoader:
     def load_model(self, model_name, dinov2_model="dinov2_vitg14", attn_backend="sage", use_fp16=True,
                   smooth_k=True, spconv_algo="implicit_gemm", main_device="cuda"):
         """Load and configure the TRELLIS model."""
+        # torch.cuda.nvtx.range_push('load_model')
         try:
             # Update global config
             TRELLIS_CONFIG.attention_backend = attn_backend
@@ -256,7 +258,8 @@ class IF_TrellisCheckpointLoader:
 
             # Apply optimizations
             pipeline = self.optimize_pipeline(pipeline, use_fp16, attn_backend)
-
+            pipeline.load_models(['image_cond_model','sparse_structure_flow_model', 'sparse_structure_decoder','slat_decoder_mesh','slat_decoder_gs','slat_decoder_rf','slat_flow_model'])
+            # torch.cuda.nvtx.range_pop()
             return (pipeline,)
 
         except Exception as e:
