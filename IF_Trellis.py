@@ -6,6 +6,7 @@ import hashlib
 import numpy as np
 import logging
 import traceback
+import uuid
 from PIL import Image
 import folder_paths
 from typing import List, Union, Tuple, Literal, Optional, Dict
@@ -368,9 +369,9 @@ class Trans3D2GlbFile:
         os.makedirs(out_dir, exist_ok=True)
           
         if save_glb:
-            texture_path = os.path.join(out_dir, f"{project_name}_texture.png") if save_texture else None
-            wireframe_path = os.path.join(out_dir, f"{project_name}_wireframe.png") if save_wireframe else None
-            glb_path = os.path.join(out_dir, f"{project_name}.glb")
+            texture_path = os.path.join(out_dir, f"{project_name}_texture_{uuid.uuid4()}.png") if save_texture else None
+            wireframe_path = os.path.join(out_dir, f"{project_name}_wireframe_{uuid.uuid4()}.png") if save_wireframe else None
+            glb_path = os.path.join(out_dir, f"{project_name}_{uuid.uuid4()}.glb")
 
             glb = postprocessing_utils.to_glb(
                 gaussian_output,
